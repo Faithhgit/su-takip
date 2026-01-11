@@ -3,91 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>H2O Pro - Dark Mode</title>
+    <title>H2O Tracker Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root { 
-            --bg: #f0f2f5; --card: rgba(255, 255, 255, 0.9); --text: #1e293b; 
-            --primary: #3b82f6; --secondary: #0ea5e9;
-        }
-        /* Karanlık Mod Renkleri */
-        body.dark-mode { 
-            --bg: #0f172a; --card: rgba(30, 41, 59, 0.8); --text: #f8fafc; 
-        }
+        :root { --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --primary: #3b82f6; --accent: #22c55e; }
+        body.dark-mode { --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --primary: #60a5fa; }
 
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text);
-            min-height: 100vh; margin: 0; display: flex; align-items: center; justify-content: center; 
-            padding: 20px; transition: all 0.4s ease;
+            margin: 0; padding: 20px; transition: 0.3s; display: flex; justify-content: center; min-height: 100vh;
         }
 
-        .main-wrapper { display: flex; gap: 25px; max-width: 900px; width: 100%; flex-wrap: wrap; justify-content: center; }
-        
+        /* Mobil ve Desktop Düzeni */
+        .main-wrapper { 
+            display: flex; gap: 20px; max-width: 1100px; width: 100%; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-start;
+        }
+
         .card { 
-            background: var(--card); backdrop-filter: blur(20px); border-radius: 40px; 
-            padding: 2.5rem; box-shadow: 0 20px 50px rgba(0,0,0,0.1); width: 340px; text-align: center; position: relative;
+            background: var(--card); padding: 1.5rem; border-radius: 30px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 320px; text-align: center; border: 1px solid rgba(125,125,125,0.1);
         }
 
-        /* Su Dalga Efekti */
-        .circle-outer {
-            width: 190px; height: 190px; border-radius: 50%; background: #fff; margin: 25px auto; 
-            position: relative; border: 6px solid #3b82f6; overflow: hidden; box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+        .circle-progress {
+            width: 160px; height: 160px; border-radius: 50%; background: var(--bg); margin: 15px auto; 
+            position: relative; border: 6px solid rgba(59, 130, 246, 0.1); overflow: hidden;
         }
-        .water-fill { 
-            position: absolute; bottom: 0; width: 100%; background: linear-gradient(to top, #2563eb, #60a5fa);
-            transition: height 1.5s cubic-bezier(0.17, 0.67, 0.83, 0.67); 
-        }
-
-        /* Başarı Bildirimi */
-        #celebration { 
-            display: none; position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
-            background: #22c55e; color: white; padding: 10px 20px; border-radius: 20px; 
-            font-weight: 800; animation: bounce 1s infinite; white-space: nowrap; z-index: 10;
+        .water-wave { 
+            position: absolute; bottom: 0; width: 100%; background: linear-gradient(180deg, var(--primary), #1d4ed8);
+            transition: height 1s ease-out; z-index: 1;
         }
 
-        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 25px; }
-        button { 
-            padding: 15px; border: none; border-radius: 18px; background: var(--primary); color: white;
-            cursor: pointer; transition: 0.3s; font-weight: 700; font-size: 1rem;
+        .btn-add { 
+            padding: 15px; border: none; border-radius: 15px; background: var(--primary); color: white;
+            cursor: pointer; font-weight: 800; width: 100%; transition: 0.2s;
         }
-        button.secondary { background: #64748b; font-size: 0.8rem; margin-top: 15px; width: 100%; }
+
+        /* Tablo Stilleri */
+        .info-panel { width: 300px; display: flex; flex-direction: column; gap: 20px; }
+        .data-table { 
+            background: var(--card); padding: 1.2rem; border-radius: 25px; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05); font-size: 0.85rem;
+        }
+        .table-title { font-weight: 800; margin-bottom: 10px; border-bottom: 2px solid var(--primary); padding-bottom: 5px; }
         
-        .dark-mode-toggle { position: fixed; top: 20px; right: 20px; font-size: 1.5rem; cursor: pointer; background: none; border: none; }
+        .row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(125,125,125,0.05); }
+        .delete-btn { color: #ff4757; cursor: pointer; border: none; background: none; font-size: 1rem; }
 
-        .history-card { 
-            background: var(--card); padding: 2rem; border-radius: 35px; width: 300px; max-height: 480px; overflow-y: auto; 
-        }
-        .summary-item { 
-            display: flex; justify-content: space-between; padding: 12px; background: rgba(125,125,125,0.1); 
-            border-radius: 12px; margin-bottom: 8px; font-size: 0.9rem;
+        #celebration { 
+            display: none; background: var(--accent); color: white; padding: 5px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 800; margin-bottom: 10px; animation: bounce 1s infinite;
         }
 
-        @keyframes bounce { 0%, 100% { top: -10px; } 50% { top: -20px; } }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
+        /* Mobil Uyumluluk */
+        @media (max-width: 768px) {
+            .main-wrapper { flex-direction: column; align-items: center; }
+            .card, .info-panel { width: 100%; max-width: 350px; }
+        }
+
+        .mode-btn { position: fixed; top: 15px; right: 15px; cursor: pointer; font-size: 1.5rem; background: none; border: none; }
     </style>
 </head>
-<body class="dark-mode"> <button class="dark-mode-toggle" onclick="toggleDarkMode()">🌓</button>
+<body class="dark-mode">
+
+<button class="mode-btn" onclick="toggleDarkMode()">🌓</button>
 
 <div class="main-wrapper">
     <div class="card">
-        <div id="celebration">🎉 HEDEFE ULAŞILDI! 🏆</div>
-        <h2 style="margin: 0; opacity: 0.8;">Bugün</h2>
-        <div class="circle-outer">
-            <div id="wave" class="water-fill" style="height: 0%"></div>
-            <div id="percent" style="position:relative; z-index:2; line-height:190px; font-size:2.5rem; font-weight:900;">0%</div>
+        <div id="celebration">🏆 HEDEF TAMAMLANDI! 🎉</div>
+        <h2 style="margin:0; font-size: 1.4rem;">Bugün</h2>
+        <div class="circle-progress">
+            <div id="wave" class="water-wave" style="height: 0%"></div>
+            <div id="percentText" style="position:relative; z-index:2; line-height:160px; font-size:2rem; font-weight:900;">0%</div>
         </div>
-        <p id="totalText" style="font-size: 1.2rem; font-weight: 700;">0 / 2500 ml</p>
-        
-        <div class="btn-group">
-            <button onclick="sendWater(250)">🥛 250ml</button>
-            <button onclick="sendWater(500)">💧 500ml</button>
+        <p id="totalText" style="font-size: 1.2rem; font-weight: 800;">0 / 2500 ml</p>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-add" onclick="sendWater(250)">🥛 250ml</button>
+            <button class="btn-add" onclick="sendWater(500)">💧 500ml</button>
         </div>
-        <button class="secondary" onclick="resetAll()">Tüm Verileri Sıfırla</button>
+        <button onclick="resetAll()" style="margin-top:20px; background:none; border:none; color:#94a3b8; cursor:pointer; font-size:0.7rem; text-decoration:underline;">Verileri Temizle</button>
     </div>
 
-    <div class="history-card">
-        <h3 style="margin-top:0">Geçmiş Başarılar</h3>
-        <div id="dailySummary"></div>
+    <div class="info-panel">
+        <div class="data-table">
+            <div class="table-title">🕒 Son İşlemler</div>
+            <div id="recentList"></div>
+        </div>
+
+        <div class="data-table">
+            <div class="table-title">📅 Geçmiş Raporu</div>
+            <div id="historyList"></div>
+        </div>
     </div>
 </div>
 
@@ -96,58 +103,68 @@
     const supabaseKey = 'sb_publishable_MtbepQrx6M5-ySSUm8MwQA_EqPb5d4P'; 
     const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-    async function fetchData() {
+    async function refresh() {
         const { data, error } = await _supabase.from('SuTakip').select('*').order('created_at', { ascending: false });
         if (error) return;
 
         const today = new Date().toLocaleDateString('tr-TR');
-        const dailyData = {};
+        const summary = {};
+        const recentLogs = data.slice(0, 5); // Son 5 işlem
         
         data.forEach(item => {
             const date = new Date(item.created_at).toLocaleDateString('tr-TR');
-            dailyData[date] = (dailyData[date] || 0) + item.amount;
+            summary[date] = (summary[date] || 0) + item.amount;
         });
 
-        const todayTotal = dailyData[today] || 0;
-        updateUI(todayTotal, dailyData);
-    }
-
-    function updateUI(todayTotal, dailyData) {
+        const current = summary[today] || 0;
         const goal = 2500;
-        const percent = Math.min((todayTotal / goal) * 100, 100);
-        
-        document.getElementById('wave').style.height = percent + '%';
-        document.getElementById('percent').innerText = Math.floor(percent) + '%';
-        document.getElementById('totalText').innerText = `${todayTotal} / ${goal} ml`;
-        
-        // Başarım Mesajı
-        document.getElementById('celebration').style.display = percent >= 100 ? 'block' : 'none';
+        const p = Math.min((current/goal)*100, 100);
 
-        document.getElementById('dailySummary').innerHTML = Object.keys(dailyData).map(date => `
-            <div class="summary-item">
-                <span>${date}</span>
-                <strong>${dailyData[date]} ml</strong>
+        // UI Ana Panel
+        document.getElementById('wave').style.height = p + '%';
+        document.getElementById('percentText').innerText = Math.floor(p) + '%';
+        document.getElementById('totalText').innerText = `${current} / ${goal} ml`;
+        document.getElementById('celebration').style.display = p >= 100 ? 'inline-block' : 'none';
+
+        // Son İşlemler Listesi (Silme butonu ile)
+        document.getElementById('recentList').innerHTML = recentLogs.map(item => `
+            <div class="row">
+                <span>${new Date(item.created_at).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})} - <b>${item.amount}ml</b></span>
+                <button class="delete-btn" onclick="deleteItem(${item.id})">🗑️</button>
             </div>
-        `).join('');
+        `).join('') || 'Kayıt yok.';
+
+        // Geçmiş Raporu
+        document.getElementById('historyList').innerHTML = Object.keys(summary).map(date => `
+            <div class="row">
+                <span>${date}</span>
+                <b>${summary[date]} ml</b>
+            </div>
+        `).join('') || 'Geçmiş yok.';
     }
 
     async function sendWater(ml) {
         await _supabase.from('SuTakip').insert([{ amount: ml }]);
-        fetchData();
+        refresh();
     }
 
-    async function resetAll() {
-        if(confirm("Tüm geçmiş verileriniz silinecek. Emin misiniz?")) {
-            await _supabase.from('SuTakip').delete().neq('id', 0);
-            fetchData();
+    async function deleteItem(id) {
+        if(confirm("Bu işlemi silmek istiyor musunuz?")) {
+            await _supabase.from('SuTakip').delete().eq('id', id);
+            refresh();
         }
     }
 
-    function toggleDarkMode() {
-        document.body.classList.toggle('dark-mode');
+    async function resetAll() {
+        if(confirm("Tüm geçmişiniz silinecek! Emin misiniz?")) {
+            await _supabase.from('SuTakip').delete().neq('id', 0);
+            refresh();
+        }
     }
 
-    fetchData();
+    function toggleDarkMode() { document.body.classList.toggle('dark-mode'); }
+    
+    refresh();
 </script>
 </body>
 </html>
