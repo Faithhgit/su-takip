@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H2O Tracker Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #00d2ff; --secondary: #3a7bd5; --glass: rgba(255, 255, 255, 0.8); }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%); 
+            min-height: 100vh; margin: 0; display: flex; align-items: center; justify-content: center; padding: 20px;
+        }
+        .main-wrapper { display: flex; gap: 30px; max-width: 900px; width: 100%; flex-wrap: wrap; justify-content: center; }
+        
+        .card { 
+            background: var(--glass); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.3);
+            padding: 2.5rem; border-radius: 40px; shadow: 0 20px 40px rgba(0,0,0,0.05); width: 360px; text-align: center; 
+        }
+
+        .circle-outer {
+            width: 200px; height: 200px; border-radius: 50%; background: white; margin: 25px auto; 
+            position: relative; border: 10px solid #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.05); overflow: hidden;
+        }
+        .water-fill { 
+            position: absolute; bottom: 0; width: 100%; background: linear-gradient(to top, var(--secondary), var(--primary));
+            transition: height 1.2s cubic-bezier(0.17, 0.67, 0.83, 0.67); opacity: 0.8; 
+        }
+        .percentage { position: relative; z-index: 2; font-size: 2.5rem; font-weight: 800; color: #1e3a8a; line-height: 200px; }
+
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px; }
+        button { 
+            padding: 18px; border: none; border-radius: 20px; background: white; cursor: pointer; 
+            transition: all 0.3s ease; font-weight: 700; color: #1e3a8a; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+        }
+        button:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+        button:active { transform: scale(0.95); }
+
+        .history-card { 
+            background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(15px); padding: 2rem; border-radius: 35px;
+            width: 320px; max-height: 450px; display: flex; flex-direction: column;
+        }
+        .history-list { list-style: none; padding: 0; margin-top: 20px; overflow-y: auto; flex-grow: 1; }
+        .history-item { 
+            background: white; padding: 12px 18px; border-radius: 18px; 
+            margin-bottom: 12px; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;
+            animation: slideIn 0.3s ease-out;
+        }
+        .delete-btn { color: #ff4757; cursor: pointer; border: none; background: none; font-size: 1.1rem; padding: 5px; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+    </style>
+</head>
+<body>
+
+<div class="main-wrapper">
+    <div class="card">
+        <h2 style="margin: 0; color: #1e3a8a; font-size: 1.8rem;">Bugün</h2>
+        <div class="circle-outer">
+            <div id="wave" class="water-fill" style="height: 0%"></div>
+            <span id="display" class="percentage">0%</span>
+        </div>
+        <p id="totalText" style="font-size: 1.3rem; color: #3a7bd5; font-weight: 700;">0 / 2500 ml</p>
+        <div class="btn-group">
+            <button onclick="sendWater(250)"><span>🥛</span><span>250ml</span></button>
+            <button onclick="sendWater(500)"><span>💧</span><span>500ml</span></button>
+        </div>
+    </div>
+
+    <div class="history-card">
+        <h3 style="margin:0; color: #1e3a8a;">Son Kayıtlar</h3>
+        <ul id="historyList" class="history-list"></ul>
+    </div>
+</div>
+
+<script>
+    // Önemli: API Key'ini buraya koyduğundan emin ol
+    const supabaseUrl = 'https://tagcqwypuubrwprzifty.supabase.co';
+    const supabaseKey = 'sb_publishable_MtbepQrx6M5-ySSUm8MwQA_EqPb5d4P'; 
+    const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+    async function fetchData() {
+        const startOfDay = new Date();
+        startOfDay.setHours(0,0,0,0);
+        
+        let { data, error } = await _supabase
+            .from('SuTakip') 
+            .select('*')
+            .gte('created_at', startOfDay.toISOString())
+            .order('created_at', { ascending: false });
+
+        if (error) return;
+
+        let total = data.reduce((sum, item) => sum + item.amount, 0);
+        updateUI(total, data);
+    }
+
+    async function sendWater(ml) {
+        const { error } = await _supabase.from('SuTakip').insert([{ amount: ml }]);
+        if (!error) fetchData();
+    }
+
+    async function deleteRecord(id) {
+        if(!confirm("Bu kaydı silmek istediğine emin misin?")) return;
+        const { error } = await _supabase.from('SuTakip').delete().eq('id', id);
+        if (!error) fetchData();
+    }
+
+    function updateUI(total, records) {
+        const goal = 2500;
+        let percent = Math.min((total / goal) * 100, 100);
+        
+        document.getElementById('display').innerText = Math.floor(percent) + "%";
+        document.getElementById('wave').style.height = percent + "%";
+        document.getElementById('totalText').innerText = `${total} / ${goal} ml`;
+
+        const listElement = document.getElementById('historyList');
+        listElement.innerHTML = records.map(item => {
+            const time = new Date(item.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+            return `
+                <li class="history-item">
+                    <span><b>${time}</b> - ${item.amount}ml</span>
+                    <button class="delete-btn" onclick="deleteRecord(${item.id})">🗑️</button>
+                </li>`;
+        }).join('');
+    }
+
+    fetchData();
+</script>
+</body>
+</html>
