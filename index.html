@@ -17,20 +17,27 @@
 
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text);
-            margin: 0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px;
-            transition: 0.5s ease; overflow-x: hidden;
+            margin: 0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; 
+            padding: 15px; /* Mobilde daha iyi görünmesi için padding ayarlandı */
+            transition: 0.5s ease; overflow-x: hidden; /* Sağa kaymayı engeller */
         }
 
-        .main-container { display: flex; gap: 30px; max-width: 1100px; width: 100%; flex-wrap: wrap; justify-content: center; }
+        .main-container { 
+            display: flex; gap: 25px; max-width: 1100px; width: 100%; 
+            flex-wrap: wrap; justify-content: center; 
+            box-sizing: border-box; /* Padding'in genişliği etkilemesini engeller */
+        }
 
         .hero-card {
             background: var(--card); backdrop-filter: blur(30px); border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 60px; padding: 40px 30px; text-align: center; box-shadow: 0 40px 100px rgba(0,0,0,0.1);
-            flex: 1; min-width: 360px; position: relative;
+            border-radius: 60px; padding: 40px 25px; text-align: center; box-shadow: 0 40px 100px rgba(0,0,0,0.1);
+            flex: 1; min-width: 320px; /* Mobilde daralabilmesi için düşürüldü */
+            max-width: 100%; position: relative; box-sizing: border-box;
         }
 
         .sphere {
-            width: 260px; height: 260px; border-radius: 50%; background: rgba(0,0,0,0.1); margin: 25px auto;
+            width: 240px; height: 240px; /* Mobilde sığması için hafif küçültüldü */
+            border-radius: 50%; background: rgba(0,0,0,0.1); margin: 25px auto;
             position: relative; overflow: hidden; border: 10px solid rgba(255,255,255,0.05);
             box-shadow: inset 0 0 50px rgba(0,0,0,0.3);
         }
@@ -57,7 +64,7 @@
             100% { transform: translateY(-250px) scale(1.5); opacity: 0; }
         }
 
-        .percent-display { position: relative; z-index: 10; line-height: 260px; font-size: 4rem; font-weight: 900; pointer-events: none; }
+        .percent-display { position: relative; z-index: 10; line-height: 240px; font-size: 3.5rem; font-weight: 900; pointer-events: none; }
 
         .input-box {
             display: flex; gap: 8px; background: rgba(125,125,125,0.1); padding: 8px; border-radius: 20px;
@@ -75,6 +82,11 @@
 
         .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
+        .side-panel { 
+            flex: 1; display: flex; flex-direction: column; gap: 20px; 
+            min-width: 320px; width: 100%; box-sizing: border-box;
+        }
+
         .glass-panel { background: var(--card); border-radius: 40px; padding: 25px; border: 1px solid rgba(255,255,255,0.05); }
         .log-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(125,125,125,0.1); border-radius: 18px; margin-bottom: 8px; }
 
@@ -84,7 +96,13 @@
         .edit-goal { cursor: pointer; font-size: 1rem; opacity: 0.5; transition: 0.3s; vertical-align: middle; margin-left: 5px; }
         .edit-goal:hover { opacity: 1; color: #3b82f6; }
 
-        @media (max-width: 850px) { .main-container { flex-direction: column; align-items: center; } .hero-card { min-width: 100%; } }
+        /* Mobilde yan paneli ve ana kartı tam genişlik yapar */
+        @media (max-width: 850px) { 
+            .main-container { flex-direction: column; align-items: center; } 
+            .hero-card, .side-panel { min-width: 100%; width: 100%; } 
+            .sphere { width: 210px; height: 210px; }
+            .percent-display { line-height: 210px; font-size: 3rem; }
+        }
     </style>
 </head>
 <body class="dark-mode">
@@ -124,7 +142,7 @@
         <button onclick="clearAll()" style="background:none; border:none; color:gray; cursor:pointer; margin-top:25px; font-size:0.7rem;">Verileri Sıfırla</button>
     </div>
 
-    <div style="flex: 1; display: flex; flex-direction: column; gap: 20px; min-width: 320px; width: 100%;">
+    <div class="side-panel">
         <div class="glass-panel">
             <div style="font-weight:800; margin-bottom:10px;">🕒 Son İşlemler</div>
             <div id="recentContainer"></div>
@@ -143,7 +161,7 @@
 
     let currentSessionTotal = 0;
     let goalReached = false;
-    let dailyGoal = parseInt(localStorage.getItem('dailyGoal')) || 2500; // Hafızadan çek veya 2500 yap
+    let dailyGoal = parseInt(localStorage.getItem('dailyGoal')) || 2500;
 
     function createBubbles() {
         const container = document.getElementById('sphereContainer');
@@ -178,7 +196,6 @@
     function updateUI(total, summary, allData) {
         const percentage = Math.min((total / dailyGoal) * 100, 100);
 
-        // Konfeti Kontrolü
         if (percentage >= 100 && !goalReached) {
             confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#3b82f6', '#00e676', '#ffffff'] });
             goalReached = true;
@@ -216,7 +233,7 @@
         if (newGoal && !isNaN(newGoal) && newGoal > 0) {
             dailyGoal = parseInt(newGoal);
             localStorage.setItem('dailyGoal', dailyGoal);
-            syncData(); // UI'ı yeni hedefe göre tazele
+            syncData();
         }
     }
 
