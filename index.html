@@ -3,247 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Su Takibi</title>
+    <meta name="description" content="Günlük su tüketiminizi takip edin ve sağlıklı kalın">
+    <meta name="theme-color" content="#3b82f6">
+    <title>Su Takibi 💧</title>
+    
+    <!-- External Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg: #f0f4f8; --card: rgba(255, 255, 255, 0.85); --text: #1e293b;
-            --danger: #ff4d4d; --warning: #ffb800; --success: #00e676;
-            --blue-grad: linear-gradient(135deg, #3b82f6, #2563eb);
-        }
-        body.dark-mode { --bg: #080c14; --card: rgba(22, 28, 45, 0.75); --text: #f8fafc; }
-
-        body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text);
-            margin: 0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px;
-            transition: 0.5s ease; overflow-x: hidden;
-        }
-
-        .main-container { display: flex; gap: 30px; max-width: 1100px; width: 100%; flex-wrap: wrap; justify-content: center; }
-
-        .hero-card {
-            background: var(--card); backdrop-filter: blur(30px); border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 60px; padding: 40px 30px; text-align: center; box-shadow: 0 40px 100px rgba(0,0,0,0.1);
-            flex: 1; min-width: 360px; position: relative;
-        }
-
-        .sphere {
-            width: 260px; height: 260px; border-radius: 50%; background: rgba(0,0,0,0.1); margin: 25px auto;
-            position: relative; overflow: hidden; border: 10px solid rgba(255,255,255,0.05);
-            box-shadow: inset 0 0 50px rgba(0,0,0,0.3);
-        }
-
-        .water-layer {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 0%;
-            transition: height 1.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .water-layer svg { position: absolute; width: 200%; height: 60px; top: -50px; left: 0; }
-        .wave-1 { fill: inherit; opacity: 0.3; animation: waveMove 4s linear infinite; }
-        .wave-2 { fill: inherit; opacity: 0.6; animation: waveMove 7s linear infinite reverse; left: -100%; }
-
-        @keyframes waveMove { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-
-        .bubble {
-            position: absolute; bottom: -20px; background: rgba(255, 255, 255, 0.4);
-            border-radius: 50%; pointer-events: none; animation: rise 3s ease-in infinite;
-        }
-
-        @keyframes rise {
-            0% { transform: translateY(0) scale(1); opacity: 0; }
-            20% { opacity: 0.6; }
-            100% { transform: translateY(-250px) scale(1.5); opacity: 0; }
-        }
-
-        .percent-display { position: relative; z-index: 10; line-height: 260px; font-size: 4rem; font-weight: 900; pointer-events: none; }
-
-        .input-box {
-            display: flex; gap: 8px; background: rgba(125,125,125,0.1); padding: 8px; border-radius: 20px;
-            border: 1px solid rgba(125,125,125,0.2); margin: 20px 0;
-        }
-        input { background: none; border: none; color: var(--text); width: 100%; font-size: 1.1rem; font-weight: 700; outline: none; text-align: center; }
-        
-        .btn-blue { 
-            background: var(--blue-grad); color: #fff; border: none; padding: 20px; 
-            border-radius: 25px; font-weight: 800; font-size: 1.1rem; cursor: pointer; transition: 0.3s;
-        }
-        .btn-blue:active { transform: scale(0.95); }
-        
-        .btn-main { background: #3b82f6; color: #fff; border: none; padding: 12px 20px; border-radius: 15px; font-weight: 800; cursor: pointer; }
-
-        .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-
-        .glass-panel { background: var(--card); border-radius: 40px; padding: 25px; border: 1px solid rgba(255,255,255,0.05); }
-        .log-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(125,125,125,0.1); border-radius: 18px; margin-bottom: 8px; }
-
-        .theme-toggle { position: fixed; top: 20px; right: 20px; font-size: 1.5rem; cursor: pointer; background: none; border: none; z-index: 100; }
-        #success-badge { display: none; background: var(--success); color: #000; padding: 8px 15px; border-radius: 50px; font-weight: 900; font-size: 0.8rem; margin-bottom: 15px; }
-
-        .edit-goal { cursor: pointer; font-size: 1rem; opacity: 0.5; transition: 0.3s; vertical-align: middle; margin-left: 5px; }
-        .edit-goal:hover { opacity: 1; color: #3b82f6; }
-
-        @media (max-width: 850px) { .main-container { flex-direction: column; align-items: center; } .hero-card { min-width: 100%; } }
-    </style>
+    
+    <!-- Local Styles -->
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body class="dark-mode">
-
-<button class="theme-toggle" onclick="toggleTheme()">🌓</button>
-
-<div class="main-container">
-    <div class="hero-card">
-        <center><div id="success-badge">✨ HEDEF TAMAMLANDI! 🏆</div></center>
-        <h1 style="margin:0; font-weight:800; font-size: 2rem;">
-            Su Takibi <span class="edit-goal" onclick="changeGoal()">✎</span>
-        </h1>
-        
-        <div class="sphere" id="sphereContainer">
-            <div id="waterLevel" class="water-layer">
-                <svg viewBox="0 0 120 28" preserveAspectRatio="none">
-                    <path class="wave-1" d="M0 15 Q30 5 60 15 T120 15 V40 H0 Z" />
-                    <path class="wave-2" d="M0 15 Q30 5 60 15 T120 15 V40 H0 Z" />
-                </svg>
-                <div id="waterBody" style="width:100%; height:100%;"></div>
-            </div>
-            <div id="percentText" class="percent-display">0%</div>
-        </div>
-        
-        <h2 id="totalDisplay" style="font-size: 2rem; margin: 10px 0; font-weight: 800;">0 / 2500 ml</h2>
-        
-        <div class="input-box">
-            <input type="number" id="manualInput" placeholder="(ml)" inputmode="decimal">
-            <button class="btn-main" onclick="addManual()">Ekle</button>
-        </div>
-
-        <div class="quick-grid">
-            <button class="btn-blue" onclick="handleWaterAdd(250)">🥛 250ml</button>
-            <button class="btn-blue" onclick="handleWaterAdd(500)">💧 500ml</button>
-        </div>
-        
-        <button onclick="clearAll()" style="background:none; border:none; color:gray; cursor:pointer; margin-top:25px; font-size:0.7rem;">Verileri Sıfırla</button>
-    </div>
-
-    <div style="flex: 1; display: flex; flex-direction: column; gap: 20px; min-width: 320px; width: 100%;">
-        <div class="glass-panel">
-            <div style="font-weight:800; margin-bottom:10px;">🕒 Son İşlemler</div>
-            <div id="recentContainer"></div>
-        </div>
-        <div class="glass-panel">
-            <div style="font-weight:800; margin-bottom:10px;">🗓️ Geçmiş Raporu</div>
-            <div id="historyContainer"></div>
-        </div>
-    </div>
-</div>
-
-<script>
-    const supabaseUrl = 'https://tagcqwypuubrwprzifty.supabase.co';
-    const supabaseKey = 'sb_publishable_MtbepQrx6M5-ySSUm8MwQA_EqPb5d4P'; 
-    const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
-    let currentSessionTotal = 0;
-    let goalReached = false;
-    let dailyGoal = parseInt(localStorage.getItem('dailyGoal')) || 2500; // Hafızadan çek veya 2500 yap
-
-    function createBubbles() {
-        const container = document.getElementById('sphereContainer');
-        for(let i = 0; i < 8; i++) {
-            const bubble = document.createElement('div');
-            bubble.className = 'bubble';
-            const size = Math.random() * 12 + 5 + 'px';
-            bubble.style.width = size; bubble.style.height = size;
-            bubble.style.left = Math.random() * 100 + '%';
-            bubble.style.animationDuration = Math.random() * 2 + 2 + 's';
-            container.appendChild(bubble);
-            setTimeout(() => { bubble.remove(); }, 3000);
-        }
-    }
-
-    async function syncData(isOptimistic = false) {
-        const { data, error } = await _supabase.from('SuTakip').select('*').order('created_at', { ascending: false });
-        if (error) return;
-
-        const today = new Date().toLocaleDateString('tr-TR');
-        const summary = {};
-        data.forEach(item => {
-            const date = new Date(item.created_at).toLocaleDateString('tr-TR');
-            summary[date] = (summary[date] || 0) + item.amount;
-        });
-
-        const realTotal = summary[today] || 0;
-        if (!isOptimistic || realTotal > currentSessionTotal) currentSessionTotal = realTotal;
-        updateUI(currentSessionTotal, summary, data);
-    }
-
-    function updateUI(total, summary, allData) {
-        const percentage = Math.min((total / dailyGoal) * 100, 100);
-
-        // Konfeti Kontrolü
-        if (percentage >= 100 && !goalReached) {
-            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#3b82f6', '#00e676', '#ffffff'] });
-            goalReached = true;
-        } else if (percentage < 100) { goalReached = false; }
-
-        let colorCode = '--danger';
-        if (total >= (dailyGoal * 0.3)) colorCode = '--warning';
-        if (total >= (dailyGoal * 0.8)) colorCode = '--success';
-        const activeColor = getComputedStyle(document.documentElement).getPropertyValue(colorCode);
-
-        document.getElementById('waterLevel').style.height = percentage + '%';
-        document.getElementById('waterBody').style.backgroundColor = activeColor;
-        document.querySelectorAll('path').forEach(w => w.style.fill = activeColor);
-        document.getElementById('percentText').innerText = Math.floor(percentage) + '%';
-        document.getElementById('totalDisplay').innerText = `${total} / ${dailyGoal} ml`;
-        document.getElementById('totalDisplay').style.color = activeColor;
-        document.getElementById('success-badge').style.display = percentage >= 100 ? 'inline-block' : 'none';
-
-        if (allData) {
-            document.getElementById('recentContainer').innerHTML = allData.slice(0, 5).map(item => `
-                <div class="log-row">
-                    <span>${new Date(item.created_at).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})}</span>
-                    <b>${item.amount} ml</b>
-                    <span style="cursor:pointer" onclick="deleteItem(${item.id})">🗑️</span>
+    <!-- Connection Status -->
+    <div id="connectionStatus" class="connection-status online">🟢 Çevrimiçi</div>
+    
+    <!-- Theme Toggle -->
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Tema değiştir" title="Tema değiştir">🌓</button>
+    
+    <div class="main-container">
+        <!-- Hero Card -->
+        <div class="hero-card">
+            <center>
+                <div id="success-badge">✨ HEDEF TAMAMLANDI! 🏆</div>
+            </center>
+            
+            <h1>
+                Su Takibi <span class="edit-goal" onclick="changeGoal()" title="Hedefi değiştir">✎</span>
+            </h1>
+            
+            <!-- Water Sphere -->
+            <div class="sphere" id="sphereContainer">
+                <div id="waterLevel" class="water-layer">
+                    <svg viewBox="0 0 120 28" preserveAspectRatio="none">
+                        <path class="wave-1" d="M0 15 Q30 5 60 15 T120 15 V40 H0 Z" />
+                        <path class="wave-2" d="M0 15 Q30 5 60 15 T120 15 V40 H0 Z" />
+                    </svg>
+                    <div id="waterBody" style="width:100%; height:100%;"></div>
                 </div>
-            `).join('');
-            document.getElementById('historyContainer').innerHTML = Object.keys(summary).map(date => `
-                <div class="log-row"><span>${date}</span><b>${summary[date]} ml</b></div>
-            `).join('');
-        }
-    }
-
-    function changeGoal() {
-        const newGoal = prompt("Günlük su hedefinizi girin (ml):", dailyGoal);
-        if (newGoal && !isNaN(newGoal) && newGoal > 0) {
-            dailyGoal = parseInt(newGoal);
-            localStorage.setItem('dailyGoal', dailyGoal);
-            syncData(); // UI'ı yeni hedefe göre tazele
-        }
-    }
-
-    async function handleWaterAdd(ml) {
-        currentSessionTotal += ml;
-        createBubbles();
-        updateUI(currentSessionTotal, {}, null); 
-        await _supabase.from('SuTakip').insert([{ amount: ml }]);
-        localStorage.setItem('lastAmount', ml);
-        syncData(true);
-    }
-
-    async function addManual() {
-        const inp = document.getElementById('manualInput');
-        const val = parseInt(inp.value);
-        if(val > 0) { handleWaterAdd(val); inp.value = ''; }
-    }
-
-    async function deleteItem(id) { if(confirm("Silinsin mi?")) { await _supabase.from('SuTakip').delete().eq('id', id); syncData(); } }
-    async function clearAll() { if(confirm("Tüm geçmiş silinecek!")) { await _supabase.from('SuTakip').delete().neq('id', 0); currentSessionTotal = 0; syncData(); } }
-    function toggleTheme() { document.body.classList.toggle('dark-mode'); syncData(); }
-
-    window.onload = () => {
-        const last = localStorage.getItem('lastAmount');
-        if(last) document.getElementById('manualInput').value = last;
-        syncData();
-    };
-</script>
+                <div id="percentText" class="percent-display">0%</div>
+            </div>
+            
+            <!-- Total Display -->
+            <h2 id="totalDisplay">0 / 2500 ml</h2>
+            
+            <!-- Manual Input -->
+            <div class="input-box">
+                <input 
+                    type="number" 
+                    id="manualInput" 
+                    placeholder="Miktar (ml)" 
+                    inputmode="decimal"
+                    min="1"
+                    max="10000"
+                    aria-label="Su miktarı girin"
+                >
+                <button class="btn-main" onclick="addManual()" id="addButton">Ekle</button>
+            </div>
+            
+            <!-- Quick Buttons -->
+            <div class="quick-grid">
+                <button class="btn-blue" onclick="handleWaterAdd(250)" aria-label="250 ml ekle">🥛 250ml</button>
+                <button class="btn-blue" onclick="handleWaterAdd(500)" aria-label="500 ml ekle">💧 500ml</button>
+            </div>
+            
+            <!-- Additional Quick Buttons -->
+            <div class="quick-grid" style="margin-top: 12px;">
+                <button class="btn-blue" onclick="handleWaterAdd(750)" aria-label="750 ml ekle">🥤 750ml</button>
+                <button class="btn-blue" onclick="handleWaterAdd(1000)" aria-label="1000 ml ekle">🍶 1000ml</button>
+            </div>
+            
+            <!-- Settings Buttons -->
+            <div style="display: flex; gap: 8px; justify-content: center; margin-top: 16px; flex-wrap: wrap;">
+                <button onclick="toggleReminder()" class="btn-action" aria-label="Hatırlatıcıları aç/kapat" style="margin-top: 0;">
+                    🔔 Hatırlatıcılar
+                </button>
+                <button onclick="clearAll()" class="btn-action" aria-label="Tüm verileri sıfırla" style="margin-top: 0;">
+                    Verileri Sıfırla
+                </button>
+            </div>
+        </div>
+        
+        <!-- Side Panels -->
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 20px; min-width: 320px; width: 100%;">
+            <!-- Statistics Panel -->
+            <div class="glass-panel">
+                <div class="section-header">📊 İstatistikler</div>
+                <div id="statsContainer">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Bu Hafta</div>
+                            <div class="stat-value">0</div>
+                            <div class="stat-label">ml</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Bu Ay</div>
+                            <div class="stat-value">0</div>
+                            <div class="stat-label">ml</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Günlük Ort.</div>
+                            <div class="stat-value">0</div>
+                            <div class="stat-label">ml</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Seri</div>
+                            <div class="stat-value">0</div>
+                            <div class="stat-label">gün 🔥</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="weeklyChartContainer"></div>
+            </div>
+            
+            <!-- Recent Activities -->
+            <div class="glass-panel">
+                <div class="section-header">🕒 Son İşlemler</div>
+                <div id="recentContainer">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">💧</div>
+                        <div class="empty-state-text">Henüz su eklenmedi</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- History Panel -->
+            <div class="glass-panel">
+                <div class="section-header">🗓️ Geçmiş Raporu</div>
+                <div id="historyContainer">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📅</div>
+                        <div class="empty-state-text">Henüz geçmiş veri yok</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast Container (will be created dynamically) -->
+    
+    <!-- Local Scripts -->
+    <script src="app.js"></script>
 </body>
 </html>
