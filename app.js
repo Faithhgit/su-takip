@@ -449,9 +449,12 @@ function updateUI(total, summary, allData) {
                 const dayBefore = new Date(today);
                 dayBefore.setDate(dayBefore.getDate() - 2);
                 
-                // Sort by created_at descending (newest first) and take first 10
+                // Sort by created_at timestamp descending - EN SON EKLENEN EN ÜSTTE
+                // Use both created_at and id as tiebreaker to ensure newest is always first
                 const sortedData = [...allData].sort((a, b) => {
-                    return new Date(b.created_at) - new Date(a.created_at);
+                    const timeDiff = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                    // If timestamps are equal (unlikely but possible), use id as tiebreaker
+                    return timeDiff !== 0 ? timeDiff : (b.id - a.id);
                 }).slice(0, 10);
                 
                 recentContainer.innerHTML = sortedData.map(item => {
