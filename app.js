@@ -430,7 +430,7 @@ function updateUI(total, summary, allData) {
     const badge = document.getElementById('success-badge');
     badge.style.display = percentage >= 100 ? 'inline-block' : 'none';
     
-        // Update recent activities
+        // Update recent activities (show all recent entries regardless of date)
         if (allData) {
             const recentContainer = document.getElementById('recentContainer');
             if (allData.length === 0) {
@@ -441,14 +441,47 @@ function updateUI(total, summary, allData) {
                 </div>
             `;
             } else {
-                recentContainer.innerHTML = allData.slice(0, 5).map(item => {
+                // Get today, yesterday, day before dates for comparison
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                const dayBefore = new Date(today);
+                dayBefore.setDate(dayBefore.getDate() - 2);
+                
+                // Sort by created_at descending (newest first) and take first 10
+                const sortedData = [...allData].sort((a, b) => {
+                    return new Date(b.created_at) - new Date(a.created_at);
+                }).slice(0, 10);
+                
+                recentContainer.innerHTML = sortedData.map(item => {
                     const drinkType = item.drink_type || 'water';
                     const drinkIcon = drinkType === 'water' ? '💧' : 
                                     drinkType === 'coffee' ? '☕' : 
                                     drinkType === 'tea' ? '🍵' : '🥤';
+                    
+                    // Determine date label
+                    const itemDate = new Date(item.created_at);
+                    itemDate.setHours(0, 0, 0, 0);
+                    let dateLabel;
+                    
+                    if (itemDate.getTime() === today.getTime()) {
+                        // Today: show time
+                        dateLabel = new Date(item.created_at).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'});
+                    } else if (itemDate.getTime() === yesterday.getTime()) {
+                        // Yesterday
+                        dateLabel = 'Dün';
+                    } else if (itemDate.getTime() === dayBefore.getTime()) {
+                        // Day before
+                        dateLabel = 'Önceki Gün';
+                    } else {
+                        // Older: show date
+                        dateLabel = itemDate.toLocaleDateString('tr-TR');
+                    }
+                    
                     return `
                 <div class="log-row">
-                    <span>${new Date(item.created_at).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})}</span>
+                    <span>${dateLabel}</span>
                     <b>${drinkIcon} ${item.amount} ml</b>
                     <span style="cursor:pointer" onclick="deleteItem(${item.id})" title="Sil">🗑️</span>
                 </div>
