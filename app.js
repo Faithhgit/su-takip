@@ -21,6 +21,10 @@ let scrollWaveAmplitude = 0;
 let animationFrameId = null;
 let prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+// Performance: Timer/Interval management
+let reminderIntervalId = null;
+let isPageVisible = !document.hidden;
+
 // Initialize
 window.addEventListener('load', init);
 window.addEventListener('online', handleOnline);
@@ -67,8 +71,38 @@ function init() {
         }
     });
     
+    // Performance: Handle page visibility (pause animations/timers when hidden)
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
     syncData();
     processPendingOperations();
+}
+
+// Performance: Handle page visibility changes
+function handleVisibilityChange() {
+    isPageVisible = !document.hidden;
+    
+    if (isPageVisible) {
+        // Page became visible - resume animations and timers
+        if (!prefersReducedMotion) {
+            setupScrollAnimations();
+        }
+        // Restart reminder if enabled
+        const reminderEnabled = localStorage.getItem('reminderEnabled') === 'true';
+        if (reminderEnabled) {
+            startReminderInterval();
+        }
+    } else {
+        // Page became hidden - pause animations and timers
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+        }
+        if (reminderIntervalId) {
+            clearInterval(reminderIntervalId);
+            reminderIntervalId = null;
+        }
+    }
 }
 
 // Setup Notifications
@@ -86,8 +120,19 @@ function setupNotifications() {
 
 // Start Reminder Interval
 function startReminderInterval() {
+    // Clear existing interval to prevent accumulation
+    if (reminderIntervalId) {
+        clearInterval(reminderIntervalId);
+    }
+    
+    // Only run if page is visible
+    if (!isPageVisible) return;
+    
     // Check every hour if user needs to drink water
-    setInterval(() => {
+    reminderIntervalId = setInterval(() => {
+        // Skip if page is hidden
+        if (!isPageVisible) return;
+        
         const lastDrink = localStorage.getItem('lastDrinkTime');
         const now = Date.now();
         const twoHours = 2 * 60 * 60 * 1000;
@@ -288,11 +333,29 @@ async function syncData(isOptimistic = false) {
             currentSessionTotal = realTotal;
         }
         
-        // Save to localStorage for offline access
+        // Performance: Clean old data before saving to localStorage
+        // Only keep last 30 days of data to prevent localStorage bloat
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const filteredData = data.filter(item => {
+            const itemDate = new Date(item.created_at);
+            return itemDate >= thirtyDaysAgo;
+        });
+        
+        // Clean summary to only include last 30 days
+        const cleanedSummary = {};
+        Object.keys(summary).forEach(date => {
+            const dateObj = new Date(date.split('.').reverse().join('-'));
+            if (dateObj >= thirtyDaysAgo) {
+                cleanedSummary[date] = summary[date];
+            }
+        });
+        
+        // Save to localStorage for offline access (with cleaned data)
         localStorage.setItem('lastSync', JSON.stringify({
             total: currentSessionTotal,
-            summary,
-            data,
+            summary: cleanedSummary,
+            data: filteredData,
             timestamp: Date.now()
         }));
         
@@ -324,6 +387,12 @@ function loadLocalData() {
 // Process Pending Operations
 async function processPendingOperations() {
     if (!isOnline || pendingOperations.length === 0) return;
+    
+    // Performance: Limit pending operations to prevent memory bloat (max 100)
+    if (pendingOperations.length > 100) {
+        pendingOperations = pendingOperations.slice(-100); // Keep only last 100
+        localStorage.setItem('pendingOperations', JSON.stringify(pendingOperations));
+    }
     
     setLoadingSync(true); // Use sync loading for pending operations
     const toProcess = [...pendingOperations];
@@ -616,8 +685,19 @@ function updateWeeklyChart(allData) {
     const today = new Date();
     const weekSummary = {};
     
+    // Performance: Only process last 7 days of data
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+    
+    // Filter data to last 7 days only
+    const recentData = allData.filter(item => {
+        const itemDate = new Date(item.created_at);
+        return itemDate >= sevenDaysAgo;
+    });
+    
     // Group data by date
-    allData.forEach(item => {
+    recentData.forEach(item => {
         const date = new Date(item.created_at).toLocaleDateString('tr-TR');
         // Calculate effective amount based on drink type
         const drinkType = item.drink_type || 'water';
@@ -996,12 +1076,21 @@ if (savedTheme === 'light') {
 // =====================================================
 
 function setupScrollAnimations() {
-    if (prefersReducedMotion) return;
+    if (prefersReducedMotion || !isPageVisible) return;
+    
+    // Clear existing animation frame to prevent accumulation
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+    }
     
     let ticking = false;
     
     function updateScrollEffects() {
-        if (prefersReducedMotion) return;
+        // Skip if page is hidden or reduced motion
+        if (!isPageVisible || prefersReducedMotion) {
+            ticking = false;
+            return;
+        }
         
         const currentScrollY = window.scrollY || window.pageYOffset;
         const currentTime = Date.now();
@@ -1041,7 +1130,7 @@ function setupScrollAnimations() {
     }
     
     function onScroll() {
-        if (!ticking && !prefersReducedMotion) {
+        if (!ticking && !prefersReducedMotion && isPageVisible) {
             animationFrameId = requestAnimationFrame(updateScrollEffects);
             ticking = true;
         }
