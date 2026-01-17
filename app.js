@@ -194,19 +194,18 @@ function showToast(message, type = 'info', duration = 3000) {
 // Loading State
 function setLoading(state) {
     isLoading = state;
-    const buttons = document.querySelectorAll('button');
-    buttons.forEach(btn => {
-        if (state) {
-            btn.disabled = true;
-            if (btn.classList.contains('btn-main')) {
-                const loader = document.createElement('span');
-                loader.className = 'loader';
-                btn.appendChild(loader);
+    
+    // Only disable specific buttons (not all buttons - theme toggle, etc. should remain enabled)
+    const actionButtons = document.querySelectorAll('.btn-main, .btn-blue, .date-simple-btn');
+    actionButtons.forEach(btn => {
+        btn.disabled = state;
+        // Add/remove loading class for spinner (no DOM manipulation)
+        if (btn.classList.contains('btn-main')) {
+            if (state) {
+                btn.classList.add('loading');
+            } else {
+                btn.classList.remove('loading');
             }
-        } else {
-            btn.disabled = false;
-            const loader = btn.querySelector('.loader');
-            if (loader) loader.remove();
         }
     });
 }
