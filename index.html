@@ -48,6 +48,22 @@
             <!-- Total Display -->
             <h2 id="totalDisplay">0 / 2500 ml</h2>
             
+            <!-- Drink Type Selection -->
+            <div class="drink-chips">
+                <button class="drink-chip active" data-drink="water" data-coefficient="1.0" onclick="selectDrink('water', 1.0)">
+                    💧 Su
+                </button>
+                <button class="drink-chip" data-drink="coffee" data-coefficient="0.8" onclick="selectDrink('coffee', 0.8)">
+                    ☕ Kahve
+                </button>
+                <button class="drink-chip" data-drink="tea" data-coefficient="0.9" onclick="selectDrink('tea', 0.9)">
+                    🍵 Çay
+                </button>
+                <button class="drink-chip" data-drink="juice" data-coefficient="0.95" onclick="selectDrink('juice', 0.95)">
+                    🥤 Meyve Suyu
+                </button>
+            </div>
+            
             <!-- Manual Input -->
             <div class="input-box">
                 <input 
@@ -62,16 +78,30 @@
                 <button class="btn-main" onclick="addManual()" id="addButton">Ekle</button>
             </div>
             
+            <!-- Date Selection -->
+            <div class="date-selector">
+                <button class="date-btn" onclick="toggleDateSelector()" id="dateToggleBtn">
+                    📅 <span id="dateDisplay">Bugün</span>
+                </button>
+                <input 
+                    type="date" 
+                    id="dateInput" 
+                    style="display: none;"
+                    max=""
+                    onchange="handleDateChange()"
+                >
+            </div>
+            
             <!-- Quick Buttons -->
             <div class="quick-grid">
-                <button class="btn-blue" onclick="handleWaterAdd(250)" aria-label="250 ml ekle">🥛 250ml</button>
-                <button class="btn-blue" onclick="handleWaterAdd(500)" aria-label="500 ml ekle">💧 500ml</button>
+                <button class="btn-blue" onclick="handleWaterAdd(250, selectedDrink.type, selectedDrink.coefficient, selectedDate)" aria-label="250 ml ekle">🥛 250ml</button>
+                <button class="btn-blue" onclick="handleWaterAdd(500, selectedDrink.type, selectedDrink.coefficient, selectedDate)" aria-label="500 ml ekle">💧 500ml</button>
             </div>
             
             <!-- Additional Quick Buttons -->
             <div class="quick-grid" style="margin-top: 12px;">
-                <button class="btn-blue" onclick="handleWaterAdd(750)" aria-label="750 ml ekle">🥤 750ml</button>
-                <button class="btn-blue" onclick="handleWaterAdd(1000)" aria-label="1000 ml ekle">🍶 1000ml</button>
+                <button class="btn-blue" onclick="handleWaterAdd(750, selectedDrink.type, selectedDrink.coefficient, selectedDate)" aria-label="750 ml ekle">🥤 750ml</button>
+                <button class="btn-blue" onclick="handleWaterAdd(1000, selectedDrink.type, selectedDrink.coefficient, selectedDate)" aria-label="1000 ml ekle">🍶 1000ml</button>
             </div>
             
             <!-- Settings Buttons -->
