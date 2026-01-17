@@ -80,30 +80,18 @@
                 <button class="btn-main" onclick="addManual()" id="addButton">Ekle</button>
             </div>
             
-            <!-- Date Selection - Mobile Optimized -->
-            <div class="date-selector-new">
-                <div class="date-quick-buttons">
-                    <button class="date-quick-btn active" id="dateTodayBtn" onclick="selectQuickDate('today')">
-                        Bugün
-                    </button>
-                    <button class="date-quick-btn" id="dateYesterdayBtn" onclick="selectQuickDate('yesterday')">
-                        Dün
-                    </button>
-                </div>
-                <div class="date-week-strip" id="dateWeekStrip">
-                    <!-- Will be populated by JavaScript -->
-                </div>
-                <button class="date-calendar-btn" id="dateCalendarBtn" onclick="openDatePicker()" title="Tarih seç">
-                    📅
+            <!-- Date Selection - Simple 3 Buttons -->
+            <div class="date-selector-simple">
+                <button class="date-simple-btn active" id="dateTodayBtn" onclick="selectDateSimple('today')">
+                    Bugün
+                </button>
+                <button class="date-simple-btn" id="dateYesterdayBtn" onclick="selectDateSimple('yesterday')">
+                    Dün
+                </button>
+                <button class="date-simple-btn" id="dateDayBeforeBtn" onclick="selectDateSimple('dayBefore')">
+                    Önceki Gün
                 </button>
             </div>
-            <input 
-                type="date" 
-                id="dateInput" 
-                style="display: none;"
-                max=""
-                onchange="handleDateChange()"
-            >
             
             <!-- Quick Buttons -->
             <div class="quick-grid">
