@@ -187,7 +187,7 @@ function updateConnectionStatus() {
     const statusEl = document.getElementById('connectionStatus');
     if (statusEl) {
         statusEl.className = `connection-status ${isOnline ? 'online' : 'offline'}`;
-        statusEl.textContent = isOnline ? '🟢 Çevrimiçi' : '🔴 Çevrimdışı';
+        statusEl.textContent = isOnline ? '🟢' : '🔴 Çevrimdışı';
     }
 }
 
@@ -1173,3 +1173,4 @@ function createAdditionBubble(amount) {
         setTimeout(() => bubble.remove(), 300);
     }, 2000);
 }
+
