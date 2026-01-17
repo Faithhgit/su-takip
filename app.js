@@ -49,8 +49,8 @@ function init() {
     // Setup notifications
     setupNotifications();
     
-    // Initialize week strip
-    initWeekStrip();
+    // Initialize date selector (set today as default)
+    selectDateSimple('today');
     
     // Setup scroll animations
     if (!prefersReducedMotion) {
@@ -685,189 +685,37 @@ function selectDrink(type, coefficient) {
     document.querySelector(`[data-drink="${type}"]`).classList.add('active');
 }
 
-// Initialize Week Strip
-function initWeekStrip() {
-    const weekStrip = document.getElementById('dateWeekStrip');
-    if (!weekStrip) return;
-    
-    const today = new Date();
-    const weekDays = [];
-    
-    // Get last 7 days (including today)
-    for (let i = 6; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - i);
-        weekDays.push(date);
-    }
-    
-    // Day names in Turkish (short)
-    const dayNames = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
-    
-    weekStrip.innerHTML = weekDays.map((date, index) => {
-        const dayName = dayNames[date.getDay() === 0 ? 6 : date.getDay() - 1];
-        const dayNumber = date.getDate();
-        const isToday = date.toDateString() === today.toDateString();
-        const dateStr = date.toISOString().split('T')[0];
-        
-        return `
-            <button 
-                class="date-week-day ${isToday ? 'active' : ''}" 
-                data-date="${dateStr}"
-                onclick="selectWeekDay('${dateStr}')"
-                title="${date.toLocaleDateString('tr-TR')}"
-            >
-                <span class="day-name">${dayName}</span>
-                <span class="day-number">${dayNumber}</span>
-            </button>
-        `;
-    }).join('');
-}
-
-// Select Quick Date (Today/Yesterday)
-function selectQuickDate(mode) {
+// Select Date Simple (3 buttons: Today, Yesterday, Day Before)
+function selectDateSimple(mode) {
     const todayBtn = document.getElementById('dateTodayBtn');
     const yesterdayBtn = document.getElementById('dateYesterdayBtn');
-    const weekDays = document.querySelectorAll('.date-week-day');
+    const dayBeforeBtn = document.getElementById('dateDayBeforeBtn');
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    let targetDate;
+    // Remove active class from all buttons
+    todayBtn.classList.remove('active');
+    yesterdayBtn.classList.remove('active');
+    dayBeforeBtn.classList.remove('active');
+    
+    // Set selected date based on mode
     if (mode === 'today') {
-        targetDate = today;
         todayBtn.classList.add('active');
-        yesterdayBtn.classList.remove('active');
         selectedDate = null; // null means today
     } else if (mode === 'yesterday') {
-        targetDate = new Date(today);
-        targetDate.setDate(targetDate.getDate() - 1);
-        todayBtn.classList.remove('active');
         yesterdayBtn.classList.add('active');
-        selectedDate = targetDate.toISOString().split('T')[0];
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        selectedDate = yesterday.toISOString().split('T')[0];
+    } else if (mode === 'dayBefore') {
+        dayBeforeBtn.classList.add('active');
+        const dayBefore = new Date(today);
+        dayBefore.setDate(dayBefore.getDate() - 2);
+        selectedDate = dayBefore.toISOString().split('T')[0];
     }
     
-    // Update week strip selection
-    weekDays.forEach(btn => {
-        const btnDate = new Date(btn.dataset.date);
-        btnDate.setHours(0, 0, 0, 0);
-        if (btnDate.getTime() === targetDate.getTime()) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
-    });
-    
-    // Refresh data
-    syncData();
-}
-
-// Select Week Day
-function selectWeekDay(dateStr) {
-    const todayBtn = document.getElementById('dateTodayBtn');
-    const yesterdayBtn = document.getElementById('dateYesterdayBtn');
-    const weekDays = document.querySelectorAll('.date-week-day');
-    
-    const selected = new Date(dateStr);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    selected.setHours(0, 0, 0, 0);
-    
-    // Update quick buttons
-    if (selected.getTime() === today.getTime()) {
-        todayBtn.classList.add('active');
-        yesterdayBtn.classList.remove('active');
-        selectedDate = null;
-    } else if (selected.getTime() === yesterday.getTime()) {
-        todayBtn.classList.remove('active');
-        yesterdayBtn.classList.add('active');
-        selectedDate = dateStr;
-    } else {
-        todayBtn.classList.remove('active');
-        yesterdayBtn.classList.remove('active');
-        selectedDate = dateStr;
-    }
-    
-    // Update week strip
-    weekDays.forEach(btn => {
-        if (btn.dataset.date === dateStr) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
-    });
-    
-    // Refresh data
-    syncData();
-}
-
-// Open Date Picker (Optional)
-function openDatePicker() {
-    const dateInput = document.getElementById('dateInput');
-    if (dateInput) {
-        dateInput.showPicker?.();
-        dateInput.addEventListener('change', handleDateChange, { once: true });
-    }
-}
-
-// Handle Date Change (from native date picker)
-function handleDateChange() {
-    const dateInput = document.getElementById('dateInput');
-    if (!dateInput || !dateInput.value) {
-        selectedDate = null;
-        syncData();
-        return;
-    }
-    
-    const selected = new Date(dateInput.value);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    selected.setHours(0, 0, 0, 0);
-    
-    // Prevent future dates
-    if (selected > today) {
-        showToast('Geleceğe veri girişi yapılamaz!', 'error');
-        dateInput.value = '';
-        selectedDate = null;
-        syncData();
-        return;
-    }
-    
-    selectedDate = dateInput.value;
-    
-    // Update UI to reflect selection
-    const todayBtn = document.getElementById('dateTodayBtn');
-    const yesterdayBtn = document.getElementById('dateYesterdayBtn');
-    const weekDays = document.querySelectorAll('.date-week-day');
-    
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    // Update quick buttons
-    if (selected.getTime() === today.getTime()) {
-        todayBtn.classList.add('active');
-        yesterdayBtn.classList.remove('active');
-        selectedDate = null;
-    } else if (selected.getTime() === yesterday.getTime()) {
-        todayBtn.classList.remove('active');
-        yesterdayBtn.classList.add('active');
-    } else {
-        todayBtn.classList.remove('active');
-        yesterdayBtn.classList.remove('active');
-    }
-    
-    // Update week strip
-    weekDays.forEach(btn => {
-        if (btn.dataset.date === selectedDate) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
-    });
-    
-    // Refresh data
+    // Refresh data - this will update UI, stats, and list
     syncData();
 }
 
