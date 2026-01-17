@@ -738,7 +738,7 @@ function selectDateSimple(mode) {
 }
 
 // Add Water
-async function handleWaterAdd(ml, drinkType = 'water', coefficient = 1.0, customDate = null) {
+async function handleWaterAdd(ml, drinkType = 'water', coefficient = 1.0, customDate = null, buttonElement = null) {
     if (ml <= 0 || ml > 10000) {
         showToast('Geçerli bir miktar girin (1-10000 ml arası).', 'error');
         return;
@@ -748,6 +748,9 @@ async function handleWaterAdd(ml, drinkType = 'water', coefficient = 1.0, custom
         showToast('Lütfen bekleyin...', 'warning');
         return;
     }
+    
+    // Determine which button to show spinner on
+    const targetButton = buttonElement || document.getElementById('addButton');
     
     // Calculate effective amount (with coefficient)
     const effectiveAmount = Math.round(ml * coefficient);
@@ -796,9 +799,8 @@ async function handleWaterAdd(ml, drinkType = 'water', coefficient = 1.0, custom
     
     // Save to backend or queue
     if (isOnline) {
-        const addButton = document.getElementById('addButton');
         try {
-            setLoadingAction(addButton, true); // Show spinner ONLY on Add button
+            setLoadingAction(targetButton, true); // Show spinner ONLY on the clicked button
             const { error } = await _supabase.from('SuTakip').insert([insertData]);
             if (error) throw error;
             
@@ -831,7 +833,7 @@ async function handleWaterAdd(ml, drinkType = 'water', coefficient = 1.0, custom
             showToast('Çevrimdışı mod. Veri yerel olarak kaydedildi.', 'warning');
             syncData();
         } finally {
-            setLoadingAction(addButton, false); // Remove spinner from Add button
+            setLoadingAction(targetButton, false); // Remove spinner from the button
         }
     } else {
         // Offline mode - queue operation
@@ -883,7 +885,8 @@ async function addManual() {
         return;
     }
     
-    await handleWaterAdd(val, selectedDrink.type, selectedDrink.coefficient, selectedDate);
+    const addButton = document.getElementById('addButton');
+    await handleWaterAdd(val, selectedDrink.type, selectedDrink.coefficient, selectedDate, addButton);
     inp.value = '';
 }
 
