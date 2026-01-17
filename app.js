@@ -428,6 +428,7 @@ function updateStats(weeklyData, monthlyData, allData = null) {
 }
 
 // Calculate Streak
+// app.js içindeki mevcut calculateStreak fonksiyonu ile değiştirin
 function calculateStreak() {
     const lastSync = localStorage.getItem('lastSync');
     if (!lastSync) return 0;
@@ -436,38 +437,37 @@ function calculateStreak() {
         const data = JSON.parse(lastSync);
         if (!data.summary) return 0;
         
-        const dates = Object.keys(data.summary).sort((a, b) => {
-            return new Date(b.split('.').reverse().join('-')) - new Date(a.split('.').reverse().join('-'));
-        });
-        
-        if (dates.length === 0) return 0;
-        
         let streak = 0;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
-        for (let i = 0; i < dates.length; i++) {
-            const dateStr = dates[i];
-            const date = new Date(dateStr.split('.').reverse().join('-'));
-            date.setHours(0, 0, 0, 0);
-            
-            const diffDays = Math.floor((today - date) / (1000 * 60 * 60 * 24));
-            
-            if (diffDays === i && data.summary[dateStr] >= dailyGoal * 0.8) {
+        let dayOffset = 0;
+        while (true) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - dayOffset);
+            const dStr = d.toLocaleDateString('tr-TR');
+            const amount = data.summary[dStr] || 0;
+
+            // Günlük hedefin en az %80'ine ulaşıldı mı?
+            if (amount >= dailyGoal * 0.8) {
                 streak++;
-            } else if (i === 0 && diffDays === 0) {
-                // Today - check if goal is reached
-                if (data.summary[dateStr] >= dailyGoal * 0.8) {
-                    streak = 1;
-                }
-                break;
             } else {
-                break;
+                // DEĞİŞİKLİK BURADA: 
+                // Eğer kontrol edilen gün 'bugün' ise (dayOffset 0) 
+                // ve hedef henüz tamamlanmadıysa seriyi bozma, dünden itibaren saymaya devam et.
+                if (dayOffset > 0) {
+                    break;
+                }
             }
+            
+            dayOffset++;
+            // Güvenlik sınırı (365 günden fazla geriye gitme)
+            if (dayOffset > 365) break;
         }
         
         return streak;
     } catch (e) {
+        console.error('Seri hesaplama hatası:', e);
         return 0;
     }
 }
@@ -735,3 +735,4 @@ if (savedTheme === 'light') {
 } else {
     document.body.classList.add('dark-mode');
 }
+
