@@ -717,6 +717,14 @@ function selectDateSimple(mode) {
     yesterdayBtn.classList.remove('active');
     dayBeforeBtn.classList.remove('active');
     
+    // Helper function to convert local Date to YYYY-MM-DD string (NO UTC conversion)
+    function toLocalDateString(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+    
     // Set selected date based on mode
     if (mode === 'today') {
         todayBtn.classList.add('active');
@@ -725,12 +733,12 @@ function selectDateSimple(mode) {
         yesterdayBtn.classList.add('active');
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
-        selectedDate = yesterday.toISOString().split('T')[0];
+        selectedDate = toLocalDateString(yesterday); // Local date, NO UTC conversion
     } else if (mode === 'dayBefore') {
         dayBeforeBtn.classList.add('active');
         const dayBefore = new Date(today);
         dayBefore.setDate(dayBefore.getDate() - 2);
-        selectedDate = dayBefore.toISOString().split('T')[0];
+        selectedDate = toLocalDateString(dayBefore); // Local date, NO UTC conversion
     }
     
     // Refresh data - this will update UI, stats, and list
@@ -761,17 +769,20 @@ async function handleWaterAdd(ml, drinkType = 'water', coefficient = 1.0, custom
     let createdAt = new Date();
     
     if (targetDate) {
-        // Parse the date and set to end of day
-        createdAt = new Date(targetDate);
-        createdAt.setHours(23, 59, 59, 999);
+        // Parse YYYY-MM-DD string to local Date (at noon to avoid timezone issues)
+        const [year, month, day] = targetDate.split('-').map(Number);
+        createdAt = new Date(year, month - 1, day, 12, 0, 0); // Noon local time
         
-        // Check if it's a future date
+        // Check if it's a future date (compare dates, not times)
         const today = new Date();
-        today.setHours(23, 59, 59, 999);
+        today.setHours(12, 0, 0, 0);
         if (createdAt > today) {
             showToast('Geleceğe veri girişi yapılamaz!', 'error');
             return;
         }
+        
+        // Set to end of day for database (but keep it in local timezone)
+        createdAt.setHours(23, 59, 59, 999);
     }
     
     // Optimistic update (only for today)
