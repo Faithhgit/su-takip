@@ -558,6 +558,40 @@ input[type="number"]::placeholder {
     cursor: not-allowed;
 }
 
+/* Loading spinner for btn-blue (quick buttons) */
+.btn-blue.loading::after {
+    content: '';
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    pointer-events: none;
+}
+
+.btn-blue.loading {
+    cursor: wait;
+    padding-right: 40px;
+}
+
+@media (max-width: 768px) {
+    .btn-blue.loading {
+        padding-right: 36px;
+    }
+    
+    .btn-blue.loading::after {
+        width: 14px;
+        height: 14px;
+        right: 10px;
+        border-width: 2px;
+    }
+}
+
 .btn-main {
     background: #3b82f6;
     color: #fff;
