@@ -569,6 +569,9 @@ input[type="number"]::placeholder {
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     font-size: 0.95rem;
     white-space: nowrap;
+    position: relative;
+    /* Reserve space for spinner to prevent layout shift */
+    padding-right: 40px;
 }
 
 .btn-main:hover {
@@ -580,6 +583,39 @@ input[type="number"]::placeholder {
 .btn-main:active {
     transform: scale(0.98) translateY(0);
     box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* Loading spinner using ::after pseudo-element (no DOM manipulation) */
+.btn-main.loading::after {
+    content: '';
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    pointer-events: none;
+}
+
+.btn-main.loading {
+    cursor: wait;
+}
+
+@media (max-width: 768px) {
+    .btn-main {
+        padding-right: 36px; /* Slightly less padding on mobile */
+    }
+    
+    .btn-main.loading::after {
+        width: 14px;
+        height: 14px;
+        right: 10px;
+        border-width: 2px;
+    }
 }
 
 .quick-grid {
@@ -735,7 +771,7 @@ input[type="number"]::placeholder {
     transform: scale(1.2);
 }
 
-/* Loading Spinner */
+/* Loading Spinner - Legacy (kept for compatibility, but not used anymore) */
 .loader {
     border: 3px solid rgba(59, 130, 246, 0.2);
     border-top: 3px solid #3b82f6;
@@ -746,6 +782,8 @@ input[type="number"]::placeholder {
     display: inline-block;
     margin-left: 8px;
 }
+
+/* Note: .loader is no longer used - spinner is now via .btn-main.loading::after */
 
 @keyframes spin {
     0% { transform: rotate(0deg); }
