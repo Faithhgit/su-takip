@@ -13,6 +13,14 @@ let isLoading = false;
 let selectedDrink = { type: 'water', coefficient: 1.0, name: 'Su' };
 let selectedDate = null; // null means today
 
+// Animation State
+let scrollVelocity = 0;
+let lastScrollY = 0;
+let lastScrollTime = Date.now();
+let scrollWaveAmplitude = 0;
+let animationFrameId = null;
+let prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 // Initialize
 window.addEventListener('load', init);
 window.addEventListener('online', handleOnline);
@@ -40,6 +48,21 @@ function init() {
     
     // Setup notifications
     setupNotifications();
+    
+    // Setup scroll animations
+    if (!prefersReducedMotion) {
+        setupScrollAnimations();
+    }
+    
+    // Setup reduced motion listener
+    window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', (e) => {
+        prefersReducedMotion = e.matches;
+        if (prefersReducedMotion) {
+            cancelAnimationFrame(animationFrameId);
+        } else {
+            setupScrollAnimations();
+        }
+    });
     
     syncData();
     processPendingOperations();
@@ -316,6 +339,7 @@ async function processPendingOperations() {
 // Update UI
 function updateUI(total, summary, allData) {
     const percentage = Math.min((total / dailyGoal) * 100, 100);
+    const previousPercentage = parseFloat(document.getElementById('waterLevel').style.height) || 0;
     
     // Confetti on goal completion
     if (percentage >= 100 && !goalReached) {
@@ -327,6 +351,13 @@ function updateUI(total, summary, allData) {
         });
         goalReached = true;
         showToast('🎉 Harika! Günlük hedefinize ulaştınız!', 'success', 5000);
+        
+        // Pulse animation for 100%
+        const sphere = document.getElementById('sphereContainer');
+        if (sphere) {
+            sphere.classList.add('goal-pulse');
+            setTimeout(() => sphere.classList.remove('goal-pulse'), 2000);
+        }
     } else if (percentage < 100) {
         goalReached = false;
     }
@@ -337,14 +368,37 @@ function updateUI(total, summary, allData) {
     if (total >= dailyGoal * 0.8) colorCode = '--success';
     const activeColor = getComputedStyle(document.documentElement).getPropertyValue(colorCode).trim();
     
-    // Update water level
+    // Update water level with spring easing
     const waterLevel = document.getElementById('waterLevel');
     const waterBody = document.getElementById('waterBody');
     const paths = document.querySelectorAll('path');
+    const sphere = document.getElementById('sphereContainer');
     
+    // Spring animation for height change
+    if (Math.abs(percentage - previousPercentage) > 0.5) {
+        waterLevel.style.transition = 'height 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    }
     waterLevel.style.height = percentage + '%';
     waterBody.style.backgroundColor = activeColor;
     paths.forEach(w => w.style.fill = activeColor);
+    
+    // Update wave speed based on percentage (0-100% → 4s to 2s)
+    const waveSpeed = prefersReducedMotion ? 4 : Math.max(2, 4 - (percentage / 100) * 2);
+    const wave1 = document.querySelector('.wave-1');
+    const wave2 = document.querySelector('.wave-2');
+    if (wave1) wave1.style.animationDuration = `${waveSpeed}s`;
+    if (wave2) wave2.style.animationDuration = `${waveSpeed * 1.75}s`;
+    
+    // Update glow intensity based on percentage
+    const glowIntensity = Math.min(percentage / 100, 1);
+    if (sphere) {
+        sphere.style.setProperty('--glow-intensity', glowIntensity);
+        sphere.style.boxShadow = `
+            inset 0 0 60px rgba(0, 0, 0, 0.3),
+            0 10px 40px rgba(0, 0, 0, 0.2),
+            0 0 ${20 + glowIntensity * 30}px rgba(59, 130, 246, ${0.2 * glowIntensity})
+        `;
+    }
     
     // Update text
     document.getElementById('percentText').innerText = Math.floor(percentage) + '%';
@@ -628,24 +682,34 @@ function selectDrink(type, coefficient) {
     document.querySelector(`[data-drink="${type}"]`).classList.add('active');
 }
 
-// Toggle Date Selector
-function toggleDateSelector() {
+// Select Date Mode (Segmented Control)
+function selectDateMode(mode) {
+    const todayBtn = document.getElementById('dateTodayBtn');
+    const selectBtn = document.getElementById('dateSelectBtn');
+    const dateInputWrapper = document.getElementById('dateInputWrapper');
     const dateInput = document.getElementById('dateInput');
-    const dateDisplay = document.getElementById('dateDisplay');
+    const dateDisplayText = document.getElementById('dateDisplayText');
     
-    if (dateInput.style.display === 'none' || !dateInput.style.display) {
-        dateInput.style.display = 'block';
+    if (mode === 'today') {
+        todayBtn.classList.add('active');
+        selectBtn.classList.remove('active');
+        dateInputWrapper.style.display = 'none';
+        selectedDate = null;
+        dateInput.value = '';
+        dateDisplayText.textContent = '';
+    } else {
+        todayBtn.classList.remove('active');
+        selectBtn.classList.add('active');
+        dateInputWrapper.style.display = 'flex';
         dateInput.focus();
         dateInput.showPicker?.();
-    } else {
-        dateInput.style.display = 'none';
     }
 }
 
 // Handle Date Change
 function handleDateChange() {
     const dateInput = document.getElementById('dateInput');
-    const dateDisplay = document.getElementById('dateDisplay');
+    const dateDisplayText = document.getElementById('dateDisplayText');
     
     if (dateInput.value) {
         const selected = new Date(dateInput.value);
@@ -658,20 +722,19 @@ function handleDateChange() {
             showToast('Geleceğe veri girişi yapılamaz!', 'error');
             dateInput.value = '';
             selectedDate = null;
-            dateDisplay.textContent = 'Bugün';
-            dateInput.style.display = 'none';
+            dateDisplayText.textContent = '';
             return;
         }
         
         selectedDate = dateInput.value;
-        const dateStr = selected.toLocaleDateString('tr-TR');
-        dateDisplay.textContent = selected.getTime() === today.getTime() ? 'Bugün' : dateStr;
+        // Format: "14 Ocak 2026"
+        const options = { day: 'numeric', month: 'long', year: 'numeric' };
+        const dateStr = selected.toLocaleDateString('tr-TR', options);
+        dateDisplayText.textContent = selected.getTime() === today.getTime() ? 'Bugün' : dateStr;
     } else {
         selectedDate = null;
-        dateDisplay.textContent = 'Bugün';
+        dateDisplayText.textContent = '';
     }
-    
-    dateInput.style.display = 'none';
 }
 
 // Add Water
@@ -715,6 +778,7 @@ async function handleWaterAdd(ml, drinkType = 'water', coefficient = 1.0, custom
     if (targetDateStr === today) {
         currentSessionTotal += effectiveAmount;
         createBubbles();
+        createAdditionBubble(ml); // Mikro animasyon: baloncuk
         updateUI(currentSessionTotal, {}, null);
     }
     
@@ -897,4 +961,97 @@ if (savedTheme === 'light') {
     document.body.classList.remove('dark-mode');
 } else {
     document.body.classList.add('dark-mode');
+}
+
+// =====================================================
+// SCROLL ANIMATIONS
+// =====================================================
+
+function setupScrollAnimations() {
+    if (prefersReducedMotion) return;
+    
+    let ticking = false;
+    
+    function updateScrollEffects() {
+        if (prefersReducedMotion) return;
+        
+        const currentScrollY = window.scrollY || window.pageYOffset;
+        const currentTime = Date.now();
+        const timeDelta = currentTime - lastScrollTime;
+        
+        if (timeDelta > 0) {
+            scrollVelocity = Math.abs(currentScrollY - lastScrollY) / timeDelta;
+            scrollVelocity = Math.min(scrollVelocity * 1000, 5); // Clamp to 0-5
+        }
+        
+        // Decay scroll velocity
+        scrollVelocity *= 0.92;
+        if (scrollVelocity < 0.01) scrollVelocity = 0;
+        
+        // Map velocity to wave amplitude (0-15px)
+        scrollWaveAmplitude = Math.min(scrollVelocity * 3, 15);
+        
+        // Apply parallax to sphere
+        const sphere = document.getElementById('sphereContainer');
+        if (sphere) {
+            const parallaxOffset = currentScrollY * 0.1;
+            sphere.style.transform = `translateY(${parallaxOffset}px)`;
+        }
+        
+        // Update wave amplitude via CSS variable
+        const waterLayer = document.querySelector('.water-layer');
+        if (waterLayer) {
+            waterLayer.style.setProperty('--scroll-amplitude', `${scrollWaveAmplitude}px`);
+        }
+        
+        // Background gradient shift
+        document.documentElement.style.setProperty('--scroll-offset', `${currentScrollY * 0.02}px`);
+        
+        lastScrollY = currentScrollY;
+        lastScrollTime = currentTime;
+        ticking = false;
+    }
+    
+    function onScroll() {
+        if (!ticking && !prefersReducedMotion) {
+            animationFrameId = requestAnimationFrame(updateScrollEffects);
+            ticking = true;
+        }
+    }
+    
+    window.addEventListener('scroll', onScroll, { passive: true });
+    updateScrollEffects(); // Initial call
+}
+
+// =====================================================
+// SPRING EASING FOR WATER LEVEL
+// =====================================================
+
+function springEasing(t) {
+    // Spring physics: overshoot and settle
+    const c4 = (2 * Math.PI) / 3;
+    return t === 0 ? 0 : t === 1 ? 1 : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
+}
+
+// =====================================================
+// CREATE ADDITION BUBBLE (Mikro animasyon)
+// =====================================================
+
+function createAdditionBubble(amount) {
+    const sphere = document.getElementById('sphereContainer');
+    if (!sphere) return;
+    
+    const bubble = document.createElement('div');
+    bubble.className = 'addition-bubble';
+    bubble.textContent = `+${amount} ml`;
+    sphere.appendChild(bubble);
+    
+    // Trigger animation
+    setTimeout(() => bubble.classList.add('show'), 10);
+    
+    // Remove after animation
+    setTimeout(() => {
+        bubble.classList.remove('show');
+        setTimeout(() => bubble.remove(), 300);
+    }, 2000);
 }
