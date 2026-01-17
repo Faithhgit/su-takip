@@ -965,6 +965,69 @@ input[type="number"]::placeholder {
     transition: var(--transition);
 }
 
+/* Sync Loading Indicator */
+.sync-indicator {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--card);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    z-index: 98;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-md);
+    color: var(--text);
+}
+
+.sync-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #3b82f6;
+    animation: syncPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes syncPulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(0.8);
+    }
+}
+
+.sync-text {
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+@media (max-width: 768px) {
+    .sync-indicator {
+        top: 60px;
+        padding: 6px 12px;
+        font-size: 0.75rem;
+    }
+    
+    .sync-dot {
+        width: 6px;
+        height: 6px;
+    }
+    
+    .sync-text {
+        font-size: 0.7rem;
+    }
+}
+
 .connection-status.online {
     background: rgba(0, 230, 118, 0.2);
     color: var(--success);
