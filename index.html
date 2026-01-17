@@ -78,18 +78,23 @@
                 <button class="btn-main" onclick="addManual()" id="addButton">Ekle</button>
             </div>
             
-            <!-- Date Selection -->
-            <div class="date-selector">
-                <button class="date-btn" onclick="toggleDateSelector()" id="dateToggleBtn">
-                    📅 <span id="dateDisplay">Bugün</span>
+            <!-- Date Selection - Segmented Control -->
+            <div class="date-selector-segmented">
+                <button class="date-segment active" id="dateTodayBtn" onclick="selectDateMode('today')">
+                    Bugün
                 </button>
+                <button class="date-segment" id="dateSelectBtn" onclick="selectDateMode('select')">
+                    Tarih Seç
+                </button>
+            </div>
+            <div class="date-input-wrapper" id="dateInputWrapper" style="display: none;">
                 <input 
                     type="date" 
                     id="dateInput" 
-                    style="display: none;"
                     max=""
                     onchange="handleDateChange()"
                 >
+                <span id="dateDisplayText" class="date-display-text"></span>
             </div>
             
             <!-- Quick Buttons -->
