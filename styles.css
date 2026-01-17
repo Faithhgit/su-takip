@@ -370,11 +370,19 @@ body.dark-mode {
     font-weight: 700;
     font-size: 0.9rem;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Only transition specific properties, NOT all (prevents layout jump) */
+    transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     flex: 1;
     min-width: 0;
     white-space: nowrap;
     opacity: 0.7;
+    /* Ensure border width stays constant to prevent layout shift */
+    box-sizing: border-box;
 }
 
 .date-simple-btn:hover {
@@ -389,7 +397,10 @@ body.dark-mode {
     border-color: rgba(255, 255, 255, 0.3);
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
     opacity: 1;
+    /* Use transform but ensure it doesn't affect parent layout */
     transform: translateY(-2px);
+    /* Prevent layout shift by keeping border width constant */
+    border-width: 2px;
 }
 
 .date-simple-btn:active {
@@ -470,7 +481,12 @@ body.dark-mode {
     border-radius: 20px;
     border: 1px solid rgba(125, 125, 125, 0.2);
     margin: 20px 0;
-    transition: var(--transition);
+    /* Fixed height to prevent layout jump */
+    min-height: 48px;
+    box-sizing: border-box;
+    /* Only transition border and box-shadow, NOT height/padding/margin */
+    transition: border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .input-box:focus-within {
