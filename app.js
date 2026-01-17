@@ -10,6 +10,8 @@ let dailyGoal = parseInt(localStorage.getItem('dailyGoal')) || 2500;
 let isOnline = navigator.onLine;
 let pendingOperations = JSON.parse(localStorage.getItem('pendingOperations') || '[]');
 let isLoading = false;
+let selectedDrink = { type: 'water', coefficient: 1.0, name: 'Su' };
+let selectedDate = null; // null means today
 
 // Initialize
 window.addEventListener('load', init);
@@ -20,6 +22,13 @@ function init() {
     updateConnectionStatus();
     const last = localStorage.getItem('lastAmount');
     if (last) document.getElementById('manualInput').value = last;
+    
+    // Set max date to today
+    const dateInput = document.getElementById('dateInput');
+    if (dateInput) {
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.setAttribute('max', today);
+    }
     
     // Enter key support for input
     document.getElementById('manualInput').addEventListener('keypress', (e) => {
@@ -218,9 +227,16 @@ async function syncData(isOptimistic = false) {
             const weekKey = getWeekKey(item.created_at);
             const monthKey = getMonthKey(item.created_at);
             
-            summary[date] = (summary[date] || 0) + item.amount;
-            weeklyData[weekKey] = (weeklyData[weekKey] || 0) + item.amount;
-            monthlyData[monthKey] = (monthlyData[monthKey] || 0) + item.amount;
+            // Calculate effective amount based on drink type
+            const drinkType = item.drink_type || 'water';
+            const coefficient = drinkType === 'water' ? 1.0 : 
+                              drinkType === 'coffee' ? 0.8 : 
+                              drinkType === 'tea' ? 0.9 : 0.95;
+            const effectiveAmount = Math.round(item.amount * coefficient);
+            
+            summary[date] = (summary[date] || 0) + effectiveAmount;
+            weeklyData[weekKey] = (weeklyData[weekKey] || 0) + effectiveAmount;
+            monthlyData[monthKey] = (monthlyData[monthKey] || 0) + effectiveAmount;
         });
         
         const realTotal = summary[today] || 0;
@@ -273,7 +289,12 @@ async function processPendingOperations() {
     for (const op of toProcess) {
         try {
             if (op.type === 'insert') {
-                await _supabase.from('SuTakip').insert([{ amount: op.amount }]);
+                const insertData = {
+                    amount: op.amount,
+                    drink_type: op.drink_type || 'water',
+                    created_at: op.created_at || new Date().toISOString()
+                };
+                await _supabase.from('SuTakip').insert([insertData]);
             } else if (op.type === 'delete') {
                 await _supabase.from('SuTakip').delete().eq('id', op.id);
             }
@@ -345,13 +366,19 @@ function updateUI(total, summary, allData) {
                 </div>
             `;
         } else {
-            recentContainer.innerHTML = allData.slice(0, 5).map(item => `
+            recentContainer.innerHTML = allData.slice(0, 5).map(item => {
+                const drinkType = item.drink_type || 'water';
+                const drinkIcon = drinkType === 'water' ? '💧' : 
+                                drinkType === 'coffee' ? '☕' : 
+                                drinkType === 'tea' ? '🍵' : '🥤';
+                return `
                 <div class="log-row">
                     <span>${new Date(item.created_at).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})}</span>
-                    <b>${item.amount} ml</b>
+                    <b>${drinkIcon} ${item.amount} ml</b>
                     <span style="cursor:pointer" onclick="deleteItem(${item.id})" title="Sil">🗑️</span>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         }
         
         // Update history
@@ -502,7 +529,13 @@ function updateWeeklyChart(allData) {
     // Group data by date
     allData.forEach(item => {
         const date = new Date(item.created_at).toLocaleDateString('tr-TR');
-        weekSummary[date] = (weekSummary[date] || 0) + item.amount;
+        // Calculate effective amount based on drink type
+        const drinkType = item.drink_type || 'water';
+        const coefficient = drinkType === 'water' ? 1.0 : 
+                          drinkType === 'coffee' ? 0.8 : 
+                          drinkType === 'tea' ? 0.9 : 0.95;
+        const effectiveAmount = Math.round(item.amount * coefficient);
+        weekSummary[date] = (weekSummary[date] || 0) + effectiveAmount;
     });
     
     const weekDays = [];
@@ -580,8 +613,69 @@ function changeGoal() {
     }
 }
 
+// Select Drink Type
+function selectDrink(type, coefficient) {
+    selectedDrink = {
+        type: type,
+        coefficient: coefficient,
+        name: type === 'water' ? 'Su' : type === 'coffee' ? 'Kahve' : type === 'tea' ? 'Çay' : 'Meyve Suyu'
+    };
+    
+    // Update UI
+    document.querySelectorAll('.drink-chip').forEach(chip => {
+        chip.classList.remove('active');
+    });
+    document.querySelector(`[data-drink="${type}"]`).classList.add('active');
+}
+
+// Toggle Date Selector
+function toggleDateSelector() {
+    const dateInput = document.getElementById('dateInput');
+    const dateDisplay = document.getElementById('dateDisplay');
+    
+    if (dateInput.style.display === 'none' || !dateInput.style.display) {
+        dateInput.style.display = 'block';
+        dateInput.focus();
+        dateInput.showPicker?.();
+    } else {
+        dateInput.style.display = 'none';
+    }
+}
+
+// Handle Date Change
+function handleDateChange() {
+    const dateInput = document.getElementById('dateInput');
+    const dateDisplay = document.getElementById('dateDisplay');
+    
+    if (dateInput.value) {
+        const selected = new Date(dateInput.value);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        selected.setHours(0, 0, 0, 0);
+        
+        // Prevent future dates
+        if (selected > today) {
+            showToast('Geleceğe veri girişi yapılamaz!', 'error');
+            dateInput.value = '';
+            selectedDate = null;
+            dateDisplay.textContent = 'Bugün';
+            dateInput.style.display = 'none';
+            return;
+        }
+        
+        selectedDate = dateInput.value;
+        const dateStr = selected.toLocaleDateString('tr-TR');
+        dateDisplay.textContent = selected.getTime() === today.getTime() ? 'Bugün' : dateStr;
+    } else {
+        selectedDate = null;
+        dateDisplay.textContent = 'Bugün';
+    }
+    
+    dateInput.style.display = 'none';
+}
+
 // Add Water
-async function handleWaterAdd(ml) {
+async function handleWaterAdd(ml, drinkType = 'water', coefficient = 1.0, customDate = null) {
     if (ml <= 0 || ml > 10000) {
         showToast('Geçerli bir miktar girin (1-10000 ml arası).', 'error');
         return;
@@ -592,32 +686,82 @@ async function handleWaterAdd(ml) {
         return;
     }
     
-    // Optimistic update
-    currentSessionTotal += ml;
-    createBubbles();
-    updateUI(currentSessionTotal, {}, null);
+    // Calculate effective amount (with coefficient)
+    const effectiveAmount = Math.round(ml * coefficient);
+    const drinkName = drinkType === 'water' ? 'Su' : drinkType === 'coffee' ? 'Kahve' : drinkType === 'tea' ? 'Çay' : 'Meyve Suyu';
     
-    // Update last drink time
-    localStorage.setItem('lastDrinkTime', Date.now().toString());
+    // Determine the date to use
+    let targetDate = customDate || selectedDate;
+    let createdAt = new Date();
+    
+    if (targetDate) {
+        // Parse the date and set to end of day
+        createdAt = new Date(targetDate);
+        createdAt.setHours(23, 59, 59, 999);
+        
+        // Check if it's a future date
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+        if (createdAt > today) {
+            showToast('Geleceğe veri girişi yapılamaz!', 'error');
+            return;
+        }
+    }
+    
+    // Optimistic update (only for today)
+    const today = new Date().toLocaleDateString('tr-TR');
+    const targetDateStr = createdAt.toLocaleDateString('tr-TR');
+    
+    if (targetDateStr === today) {
+        currentSessionTotal += effectiveAmount;
+        createBubbles();
+        updateUI(currentSessionTotal, {}, null);
+    }
+    
+    // Update last drink time (only for today)
+    if (targetDateStr === today) {
+        localStorage.setItem('lastDrinkTime', Date.now().toString());
+    }
+    
+    // Prepare data for Supabase
+    const insertData = {
+        amount: ml, // Original amount
+        drink_type: drinkType,
+        created_at: createdAt.toISOString()
+    };
     
     // Save to backend or queue
     if (isOnline) {
         try {
             setLoading(true);
-            const { error } = await _supabase.from('SuTakip').insert([{ amount: ml }]);
+            const { error } = await _supabase.from('SuTakip').insert([insertData]);
             if (error) throw error;
             
             localStorage.setItem('lastAmount', ml);
-            showToast(`${ml} ml su eklendi! 💧`, 'success');
+            
+            // Show toast with drink info
+            if (coefficient < 1.0) {
+                showToast(`${ml}ml ${drinkName} eklendi (Net: ${effectiveAmount}ml)`, 'success');
+            } else {
+                showToast(`${ml}ml ${drinkName} eklendi! 💧`, 'success');
+            }
+            
             syncData(true);
         } catch (error) {
             console.error('Insert error:', error);
             // Rollback optimistic update
-            currentSessionTotal -= ml;
-            updateUI(currentSessionTotal, {}, null);
+            if (targetDateStr === today) {
+                currentSessionTotal -= effectiveAmount;
+                updateUI(currentSessionTotal, {}, null);
+            }
             
             // Queue for later
-            pendingOperations.push({ type: 'insert', amount: ml });
+            pendingOperations.push({ 
+                type: 'insert', 
+                amount: ml, 
+                drink_type: drinkType,
+                created_at: createdAt.toISOString()
+            });
             localStorage.setItem('pendingOperations', JSON.stringify(pendingOperations));
             showToast('Çevrimdışı mod. Veri yerel olarak kaydedildi.', 'warning');
             syncData();
@@ -626,15 +770,34 @@ async function handleWaterAdd(ml) {
         }
     } else {
         // Offline mode - queue operation
-        pendingOperations.push({ type: 'insert', amount: ml });
+        pendingOperations.push({ 
+            type: 'insert', 
+            amount: ml, 
+            drink_type: drinkType,
+            created_at: createdAt.toISOString()
+        });
         localStorage.setItem('pendingOperations', JSON.stringify(pendingOperations));
         localStorage.setItem('lastAmount', ml);
-        showToast(`${ml} ml su eklendi! (Çevrimdışı)`, 'success');
+        
+        if (coefficient < 1.0) {
+            showToast(`${ml}ml ${drinkName} eklendi (Net: ${effectiveAmount}ml) (Çevrimdışı)`, 'success');
+        } else {
+            showToast(`${ml}ml ${drinkName} eklendi! (Çevrimdışı)`, 'success');
+        }
         
         // Save to local storage
         const lastSync = JSON.parse(localStorage.getItem('lastSync') || '{}');
-        lastSync.total = (lastSync.total || 0) + ml;
+        if (targetDateStr === today) {
+            lastSync.total = (lastSync.total || 0) + effectiveAmount;
+        }
         localStorage.setItem('lastSync', JSON.stringify(lastSync));
+    }
+    
+    // Reset date selection after adding
+    if (selectedDate) {
+        selectedDate = null;
+        document.getElementById('dateInput').value = '';
+        document.getElementById('dateDisplay').textContent = 'Bugün';
     }
 }
 
@@ -655,7 +818,7 @@ async function addManual() {
         return;
     }
     
-    await handleWaterAdd(val);
+    await handleWaterAdd(val, selectedDrink.type, selectedDrink.coefficient, selectedDate);
     inp.value = '';
 }
 
@@ -735,4 +898,3 @@ if (savedTheme === 'light') {
 } else {
     document.body.classList.add('dark-mode');
 }
-
