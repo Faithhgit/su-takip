@@ -191,23 +191,42 @@ function showToast(message, type = 'info', duration = 3000) {
     }, duration);
 }
 
-// Loading State
-function setLoading(state) {
-    isLoading = state;
+// Loading State Management - Split into Sync and Action loading
+
+// Sync Loading: For data fetching (date changes, sync operations)
+// Shows small indicator at top, does NOT show spinner on buttons
+function setLoadingSync(state) {
+    const syncIndicator = document.getElementById('syncIndicator');
+    if (syncIndicator) {
+        syncIndicator.style.display = state ? 'flex' : 'none';
+    }
     
-    // Only disable specific buttons (not all buttons - theme toggle, etc. should remain enabled)
+    // Disable action buttons during sync (but no spinner)
     const actionButtons = document.querySelectorAll('.btn-main, .btn-blue, .date-simple-btn');
     actionButtons.forEach(btn => {
         btn.disabled = state;
-        // Add/remove loading class for spinner (no DOM manipulation)
-        if (btn.classList.contains('btn-main')) {
-            if (state) {
-                btn.classList.add('loading');
-            } else {
-                btn.classList.remove('loading');
-            }
-        }
     });
+}
+
+// Action Loading: For specific button actions (Add, Delete, Clear)
+// Shows spinner ONLY on the specified button
+function setLoadingAction(buttonElement, state) {
+    if (!buttonElement) return;
+    
+    if (state) {
+        buttonElement.classList.add('loading');
+        buttonElement.disabled = true;
+    } else {
+        buttonElement.classList.remove('loading');
+        buttonElement.disabled = false;
+    }
+}
+
+// Legacy function - kept for backward compatibility but now delegates
+function setLoading(state) {
+    isLoading = state;
+    // Use sync loading by default (for backward compatibility)
+    setLoadingSync(state);
 }
 
 // Bubble Animation
@@ -234,7 +253,7 @@ async function syncData(isOptimistic = false) {
     }
     
     try {
-        setLoading(true);
+        setLoadingSync(true); // Use sync loading (shows indicator, not button spinner)
         const { data, error } = await _supabase
             .from('SuTakip')
             .select('*')
@@ -285,7 +304,7 @@ async function syncData(isOptimistic = false) {
         showToast('Veri senkronizasyonu başarısız. Çevrimdışı moda geçiliyor.', 'error');
         loadLocalData();
     } finally {
-        setLoading(false);
+        setLoadingSync(false); // Use sync loading
     }
 }
 
@@ -306,7 +325,7 @@ function loadLocalData() {
 async function processPendingOperations() {
     if (!isOnline || pendingOperations.length === 0) return;
     
-    setLoading(true);
+    setLoadingSync(true); // Use sync loading for pending operations
     const toProcess = [...pendingOperations];
     pendingOperations = [];
     localStorage.setItem('pendingOperations', JSON.stringify([]));
@@ -330,7 +349,7 @@ async function processPendingOperations() {
     }
     
     localStorage.setItem('pendingOperations', JSON.stringify(pendingOperations));
-    setLoading(false);
+    setLoadingSync(false); // Use sync loading
     syncData();
     
     if (toProcess.length > 0) {
@@ -777,8 +796,9 @@ async function handleWaterAdd(ml, drinkType = 'water', coefficient = 1.0, custom
     
     // Save to backend or queue
     if (isOnline) {
+        const addButton = document.getElementById('addButton');
         try {
-            setLoading(true);
+            setLoadingAction(addButton, true); // Show spinner ONLY on Add button
             const { error } = await _supabase.from('SuTakip').insert([insertData]);
             if (error) throw error;
             
@@ -811,7 +831,7 @@ async function handleWaterAdd(ml, drinkType = 'water', coefficient = 1.0, custom
             showToast('Çevrimdışı mod. Veri yerel olarak kaydedildi.', 'warning');
             syncData();
         } finally {
-            setLoading(false);
+            setLoadingAction(addButton, false); // Remove spinner from Add button
         }
     } else {
         // Offline mode - queue operation
@@ -877,8 +897,10 @@ async function deleteItem(id) {
     }
     
     if (isOnline) {
+        // Note: Delete button is in log-row, we'll use sync loading for now
+        // as the delete button is dynamically created
         try {
-            setLoading(true);
+            setLoadingSync(true); // Use sync loading for delete operations
             const { error } = await _supabase.from('SuTakip').delete().eq('id', id);
             if (error) throw error;
             
@@ -888,7 +910,7 @@ async function deleteItem(id) {
             console.error('Delete error:', error);
             showToast('Silme işlemi başarısız oldu.', 'error');
         } finally {
-            setLoading(false);
+            setLoadingSync(false);
         }
     } else {
         pendingOperations.push({ type: 'delete', id });
@@ -910,7 +932,7 @@ async function clearAll() {
     
     if (isOnline) {
         try {
-            setLoading(true);
+            setLoadingSync(true); // Use sync loading for clear all
             const { error } = await _supabase.from('SuTakip').delete().neq('id', 0);
             if (error) throw error;
             
@@ -921,7 +943,7 @@ async function clearAll() {
             console.error('Clear error:', error);
             showToast('Silme işlemi başarısız oldu.', 'error');
         } finally {
-            setLoading(false);
+            setLoadingSync(false);
         }
     } else {
         showToast('Bu işlem için internet bağlantısı gereklidir.', 'error');
