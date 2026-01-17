@@ -455,7 +455,7 @@ function updateUI(total, summary, allData) {
                     const timeDiff = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
                     // If timestamps are equal (unlikely but possible), use id as tiebreaker
                     return timeDiff !== 0 ? timeDiff : (b.id - a.id);
-                }).slice(0, 10);
+                }).slice(0, 6);
                 
                 recentContainer.innerHTML = sortedData.map(item => {
                     const drinkType = item.drink_type || 'water';
@@ -907,12 +907,8 @@ async function handleWaterAdd(ml, drinkType = 'water', coefficient = 1.0, custom
         localStorage.setItem('lastSync', JSON.stringify(lastSync));
     }
     
-    // Reset date selection after adding
-    if (selectedDate) {
-        selectedDate = null;
-        document.getElementById('dateInput').value = '';
-        document.getElementById('dateDisplay').textContent = 'Bugün';
-    }
+    // DO NOT reset date selection after adding - keep selected date active
+    // This allows users to add multiple entries to the same date (Dün/Önceki Gün)
 }
 
 // Add Manual
