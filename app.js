@@ -13,49 +13,6 @@ let isLoading = false;
 let selectedDrink = { type: 'water', coefficient: 1.0, name: 'Su' };
 let selectedDate = null; // null means today
 
-// =====================================================
-// DATE HELPERS - LOCAL DATE ONLY (NO UTC)
-// =====================================================
-
-// Get local date string in YYYY-MM-DD format (NO UTC conversion)
-function getLocalDateString(date = new Date()) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
-// Get today's date in local YYYY-MM-DD format
-function getTodayLocal() {
-    return getLocalDateString();
-}
-
-// Get yesterday's date in local YYYY-MM-DD format
-function getYesterdayLocal() {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    return getLocalDateString(yesterday);
-}
-
-// Get day before yesterday in local YYYY-MM-DD format
-function getDayBeforeLocal() {
-    const dayBefore = new Date();
-    dayBefore.setDate(dayBefore.getDate() - 2);
-    return getLocalDateString(dayBefore);
-}
-
-// Parse YYYY-MM-DD string to local Date (at noon to avoid timezone issues)
-function parseLocalDate(dateString) {
-    const [year, month, day] = dateString.split('-').map(Number);
-    return new Date(year, month - 1, day, 12, 0, 0); // Noon local time
-}
-
-// Get date string from Supabase timestamp (convert to local YYYY-MM-DD)
-function getLocalDateFromTimestamp(timestamp) {
-    const date = new Date(timestamp);
-    return getLocalDateString(date);
-}
-
 // Animation State
 let scrollVelocity = 0;
 let lastScrollY = 0;
@@ -74,11 +31,11 @@ function init() {
     const last = localStorage.getItem('lastAmount');
     if (last) document.getElementById('manualInput').value = last;
     
-    // Set max date to today (local date)
+    // Set max date to today
     const dateInput = document.getElementById('dateInput');
     if (dateInput) {
-        const todayLocal = getTodayLocal();
-        dateInput.setAttribute('max', todayLocal);
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.setAttribute('max', today);
     }
     
     // Enter key support for input
@@ -304,16 +261,13 @@ async function syncData(isOptimistic = false) {
         
         if (error) throw error;
         
-        // Use local YYYY-MM-DD format for all date operations
-        const todayLocal = getTodayLocal();
-        const selectedDateLocal = selectedDate || todayLocal;
+        const today = new Date().toLocaleDateString('tr-TR');
         const summary = {};
         const weeklyData = {};
         const monthlyData = {};
         
         data.forEach(item => {
-            // Convert Supabase timestamp to local YYYY-MM-DD
-            const date = getLocalDateFromTimestamp(item.created_at);
+            const date = new Date(item.created_at).toLocaleDateString('tr-TR');
             const weekKey = getWeekKey(item.created_at);
             const monthKey = getMonthKey(item.created_at);
             
@@ -329,8 +283,7 @@ async function syncData(isOptimistic = false) {
             monthlyData[monthKey] = (monthlyData[monthKey] || 0) + effectiveAmount;
         });
         
-        // Get total for selected date (or today if null)
-        const realTotal = summary[selectedDateLocal] || 0;
+        const realTotal = summary[today] || 0;
         if (!isOptimistic || realTotal > currentSessionTotal) {
             currentSessionTotal = realTotal;
         }
@@ -477,26 +430,18 @@ function updateUI(total, summary, allData) {
     const badge = document.getElementById('success-badge');
     badge.style.display = percentage >= 100 ? 'inline-block' : 'none';
     
-        // Update recent activities (filter by selected date)
+        // Update recent activities
         if (allData) {
             const recentContainer = document.getElementById('recentContainer');
-            const selectedDateLocal = selectedDate || getTodayLocal();
-            
-            // Filter data by selected date (using local YYYY-MM-DD format)
-            const filteredData = allData.filter(item => {
-                const itemDate = getLocalDateFromTimestamp(item.created_at);
-                return itemDate === selectedDateLocal;
-            });
-            
-            if (filteredData.length === 0) {
+            if (allData.length === 0) {
                 recentContainer.innerHTML = `
                 <div class="empty-state">
                     <div class="empty-state-icon">💧</div>
-                    <div class="empty-state-text">Bu tarihte su eklenmedi</div>
+                    <div class="empty-state-text">Henüz su eklenmedi</div>
                 </div>
             `;
             } else {
-                recentContainer.innerHTML = filteredData.slice(0, 10).map(item => {
+                recentContainer.innerHTML = allData.slice(0, 5).map(item => {
                     const drinkType = item.drink_type || 'water';
                     const drinkIcon = drinkType === 'water' ? '💧' : 
                                     drinkType === 'coffee' ? '☕' : 
@@ -511,12 +456,9 @@ function updateUI(total, summary, allData) {
                 }).join('');
             }
             
-            // Update history (convert YYYY-MM-DD to Turkish format for display)
+            // Update history
             const historyContainer = document.getElementById('historyContainer');
-            const dates = Object.keys(summary).sort((a, b) => {
-                // Compare YYYY-MM-DD strings directly
-                return b.localeCompare(a);
-            });
+            const dates = Object.keys(summary).sort((a, b) => new Date(b.split('.').reverse().join('-')) - new Date(a.split('.').reverse().join('-')));
             
             if (dates.length === 0) {
                 historyContainer.innerHTML = `
@@ -526,17 +468,12 @@ function updateUI(total, summary, allData) {
                 </div>
             `;
             } else {
-                historyContainer.innerHTML = dates.map(date => {
-                    // Convert YYYY-MM-DD to Turkish format (DD.MM.YYYY) for display
-                    const [year, month, day] = date.split('-');
-                    const displayDate = `${day}.${month}.${year}`;
-                    return `
+                historyContainer.innerHTML = dates.map(date => `
                 <div class="log-row">
-                    <span>${displayDate}</span>
+                    <span>${date}</span>
                     <b>${summary[date]} ml</b>
                 </div>
-            `;
-                }).join('');
+            `).join('');
             }
         }
 }
@@ -603,13 +540,14 @@ function calculateStreak() {
         if (!data.summary) return 0;
         
         let streak = 0;
-        const todayLocal = getTodayLocal();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
         
         let dayOffset = 0;
         while (true) {
-            const d = new Date();
+            const d = new Date(today);
             d.setDate(d.getDate() - dayOffset);
-            const dStr = getLocalDateString(d); // Use YYYY-MM-DD format
+            const dStr = d.toLocaleDateString('tr-TR');
             const amount = data.summary[dStr] || 0;
 
             // Günlük hedefin en az %80'ine ulaşıldı mı?
@@ -660,11 +598,12 @@ function updateWeeklyChart(allData) {
     const chartContainer = document.getElementById('weeklyChartContainer');
     if (!chartContainer) return;
     
+    const today = new Date();
     const weekSummary = {};
     
-    // Group data by date (using local YYYY-MM-DD format)
+    // Group data by date
     allData.forEach(item => {
-        const date = getLocalDateFromTimestamp(item.created_at);
+        const date = new Date(item.created_at).toLocaleDateString('tr-TR');
         // Calculate effective amount based on drink type
         const drinkType = item.drink_type || 'water';
         const coefficient = drinkType === 'water' ? 1.0 : 
@@ -677,15 +616,12 @@ function updateWeeklyChart(allData) {
     const weekDays = [];
     const weekValues = [];
     
-    // Get last 7 days (using local dates)
+    // Get last 7 days
     for (let i = 6; i >= 0; i--) {
-        const date = new Date();
+        const date = new Date(today);
         date.setDate(date.getDate() - i);
-        const dateStr = getLocalDateString(date); // YYYY-MM-DD format
-        // Convert to Turkish format for display
-        const [year, month, day] = dateStr.split('-');
-        const displayDate = `${day}.${month}.${year}`;
-        weekDays.push(displayDate);
+        const dateStr = date.toLocaleDateString('tr-TR');
+        weekDays.push(dateStr);
         weekValues.push(weekSummary[dateStr] || 0);
     }
     
@@ -697,10 +633,7 @@ function updateWeeklyChart(allData) {
             ${weekDays.map((day, index) => {
                 const value = weekValues[index];
                 const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
-                // Parse display date (DD.MM.YYYY) back to Date for day name
-                const [dayNum, monthNum, yearNum] = day.split('.');
-                const dayDate = new Date(parseInt(yearNum), parseInt(monthNum) - 1, parseInt(dayNum));
-                const dayName = dayDate.toLocaleDateString('tr-TR', { weekday: 'short' });
+                const dayName = new Date(day.split('.').reverse().join('-')).toLocaleDateString('tr-TR', { weekday: 'short' });
                 const isToday = index === 6;
                 
                 return `
@@ -776,21 +709,28 @@ function selectDateSimple(mode) {
     const yesterdayBtn = document.getElementById('dateYesterdayBtn');
     const dayBeforeBtn = document.getElementById('dateDayBeforeBtn');
     
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
     // Remove active class from all buttons
     todayBtn.classList.remove('active');
     yesterdayBtn.classList.remove('active');
     dayBeforeBtn.classList.remove('active');
     
-    // Set selected date based on mode (using LOCAL dates only)
+    // Set selected date based on mode
     if (mode === 'today') {
         todayBtn.classList.add('active');
         selectedDate = null; // null means today
     } else if (mode === 'yesterday') {
         yesterdayBtn.classList.add('active');
-        selectedDate = getYesterdayLocal(); // Local YYYY-MM-DD
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        selectedDate = yesterday.toISOString().split('T')[0];
     } else if (mode === 'dayBefore') {
         dayBeforeBtn.classList.add('active');
-        selectedDate = getDayBeforeLocal(); // Local YYYY-MM-DD
+        const dayBefore = new Date(today);
+        dayBefore.setDate(dayBefore.getDate() - 2);
+        selectedDate = dayBefore.toISOString().split('T')[0];
     }
     
     // Refresh data - this will update UI, stats, and list
@@ -816,28 +756,29 @@ async function handleWaterAdd(ml, drinkType = 'water', coefficient = 1.0, custom
     const effectiveAmount = Math.round(ml * coefficient);
     const drinkName = drinkType === 'water' ? 'Su' : drinkType === 'coffee' ? 'Kahve' : drinkType === 'tea' ? 'Çay' : 'Meyve Suyu';
     
-    // Determine the date to use (LOCAL dates only)
+    // Determine the date to use
     let targetDate = customDate || selectedDate;
     let createdAt = new Date();
     
     if (targetDate) {
-        // Parse local YYYY-MM-DD string to Date (at noon to avoid timezone issues)
-        createdAt = parseLocalDate(targetDate);
+        // Parse the date and set to end of day
+        createdAt = new Date(targetDate);
+        createdAt.setHours(23, 59, 59, 999);
         
-        // Check if it's a future date (compare local dates)
-        const todayLocal = getTodayLocal();
-        if (targetDate > todayLocal) {
+        // Check if it's a future date
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+        if (createdAt > today) {
             showToast('Geleceğe veri girişi yapılamaz!', 'error');
             return;
         }
     }
     
-    // Get target date string in local format
-    const targetDateStr = targetDate || getTodayLocal();
-    
     // Optimistic update (only for today)
-    const todayLocal = getTodayLocal();
-    if (targetDateStr === todayLocal) {
+    const today = new Date().toLocaleDateString('tr-TR');
+    const targetDateStr = createdAt.toLocaleDateString('tr-TR');
+    
+    if (targetDateStr === today) {
         currentSessionTotal += effectiveAmount;
         createBubbles();
         createAdditionBubble(ml); // Mikro animasyon: baloncuk
@@ -845,15 +786,15 @@ async function handleWaterAdd(ml, drinkType = 'water', coefficient = 1.0, custom
     }
     
     // Update last drink time (only for today)
-    if (targetDateStr === todayLocal) {
+    if (targetDateStr === today) {
         localStorage.setItem('lastDrinkTime', Date.now().toString());
     }
     
-    // Prepare data for Supabase (created_at as ISO string for database)
+    // Prepare data for Supabase
     const insertData = {
         amount: ml, // Original amount
         drink_type: drinkType,
-        created_at: createdAt.toISOString() // Database needs ISO format
+        created_at: createdAt.toISOString()
     };
     
     // Save to backend or queue
