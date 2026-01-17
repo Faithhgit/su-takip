@@ -352,174 +352,73 @@ body.dark-mode {
     }
 }
 
-/* Date Selector - Mobile Optimized */
-.date-selector-new {
+/* Date Selector - Simple 3 Buttons */
+.date-selector-simple {
     display: flex;
-    align-items: center;
     gap: 8px;
     margin: 12px 0;
-    padding: 8px;
-    background: rgba(125, 125, 125, 0.1);
-    border-radius: 20px;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    flex-wrap: wrap;
-}
-
-.date-quick-buttons {
-    display: flex;
-    gap: 6px;
-}
-
-.date-quick-btn {
-    background: transparent;
-    border: none;
-    color: var(--text);
-    padding: 8px 16px;
-    border-radius: 16px;
-    font-weight: 700;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    white-space: nowrap;
-}
-
-.date-quick-btn:hover {
-    background: rgba(125, 125, 125, 0.1);
-}
-
-.date-quick-btn.active {
-    background: var(--blue-grad);
-    color: #fff;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
-}
-
-.date-quick-btn:active {
-    transform: scale(0.98);
-}
-
-.date-week-strip {
-    display: flex;
-    gap: 4px;
-    flex: 1;
     justify-content: center;
-    min-width: 0;
+    flex-wrap: nowrap;
 }
 
-.date-week-day {
-    background: transparent;
+.date-simple-btn {
+    background: rgba(125, 125, 125, 0.1);
     border: 2px solid transparent;
     color: var(--text);
-    padding: 6px 8px;
-    border-radius: 12px;
+    padding: 12px 20px;
+    border-radius: 16px;
     font-weight: 700;
-    font-size: 0.75rem;
+    font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    min-width: 40px;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
     opacity: 0.7;
 }
 
-.date-week-day:hover {
-    background: rgba(125, 125, 125, 0.1);
+.date-simple-btn:hover {
+    background: rgba(125, 125, 125, 0.15);
     opacity: 1;
+    transform: translateY(-1px);
 }
 
-.date-week-day.active {
+.date-simple-btn.active {
     background: var(--blue-grad);
     color: #fff;
     border-color: rgba(255, 255, 255, 0.3);
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
     opacity: 1;
-    transform: scale(1.05);
+    transform: translateY(-2px);
 }
 
-.date-week-day:active {
-    transform: scale(0.95);
+.date-simple-btn:active {
+    transform: scale(0.98) translateY(0);
 }
 
-.date-week-day .day-name {
-    font-size: 0.7rem;
-    font-weight: 600;
-    opacity: 0.8;
-}
-
-.date-week-day.active .day-name {
-    opacity: 1;
-}
-
-.date-week-day .day-number {
-    font-size: 0.85rem;
-    font-weight: 800;
-}
-
-.date-calendar-btn {
-    background: rgba(125, 125, 125, 0.1);
-    border: none;
-    color: var(--text);
-    padding: 8px 12px;
-    border-radius: 16px;
-    font-size: 1.2rem;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 40px;
-    height: 40px;
-}
-
-.date-calendar-btn:hover {
-    background: rgba(125, 125, 125, 0.15);
-    transform: scale(1.1);
-}
-
-.date-calendar-btn:active {
-    transform: scale(0.95);
-}
-
-#dateInput {
-    display: none;
+.date-simple-btn.active:active {
+    transform: scale(0.98) translateY(-1px);
 }
 
 @media (max-width: 768px) {
-    .date-selector-new {
+    .date-selector-simple {
         gap: 6px;
-        padding: 6px;
+        margin: 10px 0;
     }
     
-    .date-quick-btn {
-        padding: 6px 12px;
-        font-size: 0.8rem;
-    }
-    
-    .date-week-day {
-        min-width: 36px;
-        padding: 5px 6px;
-    }
-    
-    .date-week-day .day-name {
-        font-size: 0.65rem;
-    }
-    
-    .date-week-day .day-number {
-        font-size: 0.8rem;
-    }
-    
-    .date-calendar-btn {
-        min-width: 36px;
-        height: 36px;
-        padding: 6px 10px;
-        font-size: 1.1rem;
+    .date-simple-btn {
+        padding: 10px 14px;
+        font-size: 0.85rem;
+        border-width: 1.5px;
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .date-week-day.active {
+    .date-simple-btn.active {
+        transform: none;
+    }
+    
+    .date-simple-btn:hover {
         transform: none;
     }
 }
