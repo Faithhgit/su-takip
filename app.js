@@ -449,12 +449,11 @@ function updateUI(total, summary, allData) {
                 const dayBefore = new Date(today);
                 dayBefore.setDate(dayBefore.getDate() - 2);
                 
-                // Sort by created_at timestamp descending - EN SON EKLENEN EN ÜSTTE
-                // Use both created_at and id as tiebreaker to ensure newest is always first
+                // Sort by ID descending - EN SON EKLENEN EN ÜSTTE
+                // ID is auto-increment, so highest ID = most recently added entry
+                // This ensures correct order even when adding entries to past dates
                 const sortedData = [...allData].sort((a, b) => {
-                    const timeDiff = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-                    // If timestamps are equal (unlikely but possible), use id as tiebreaker
-                    return timeDiff !== 0 ? timeDiff : (b.id - a.id);
+                    return b.id - a.id; // Highest ID first = most recent
                 }).slice(0, 6);
                 
                 recentContainer.innerHTML = sortedData.map(item => {
