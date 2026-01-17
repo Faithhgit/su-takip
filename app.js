@@ -490,26 +490,6 @@ function updateUI(total, summary, allData) {
             `;
                 }).join('');
             }
-            
-            // Update history
-            const historyContainer = document.getElementById('historyContainer');
-            const dates = Object.keys(summary).sort((a, b) => new Date(b.split('.').reverse().join('-')) - new Date(a.split('.').reverse().join('-')));
-            
-            if (dates.length === 0) {
-                historyContainer.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">📅</div>
-                    <div class="empty-state-text">Henüz geçmiş veri yok</div>
-                </div>
-            `;
-            } else {
-                historyContainer.innerHTML = dates.map(date => `
-                <div class="log-row">
-                    <span>${date}</span>
-                    <b>${summary[date]} ml</b>
-                </div>
-            `).join('');
-            }
         }
 }
 
